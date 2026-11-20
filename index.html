@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hotel Owner Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Lora:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --side:#2a1b45; --side2:#22163a; --side-ink:#ffffff; --side-muted:#b9add0; --side-line:rgba(255,255,255,.08);
+  --gold:#e0b43a; --gold-soft:rgba(224,180,58,.18);
+  --bg:#f5f3f8; --card:#ffffff; --ink:#1d1730; --muted:#7a7290; --line:#ebe7f1;
+  --purple:#3b2560; --purple2:#4d2f78;
+  --free:#2e8b57;  --free-bg:#eef8f1;  --free-line:#d3ecdc;
+  --occ:#2f5fd0;   --occ-bg:#edf2fe;   --occ-line:#d3defb;
+  --out:#13877c;   --out-bg:#e9f6f4;   --out-line:#cbe9e4;
+  --bad:#c0392b;   --bad-bg:#fdf0ee;   --bad-line:#f3cdc7;
+  --off:#7a7290;   --off-bg:#f3f1f6;   --off-line:#e3dfea;
+  --serif:"Lora",Georgia,serif;
+  --sans:"Poppins",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans)}
+button,input,select{font:inherit;color:inherit}
+.hidden{display:none!important}
+a{color:inherit}
+
+/* ===== login ===== */
+.login{min-height:100vh;display:grid;place-items:center;padding:16px;background:linear-gradient(160deg,var(--side) 0%,var(--side2) 100%)}
+.login form{background:var(--card);border-radius:18px;padding:32px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.login h1{margin:0 0 18px;font-size:22px;text-align:center}
+.login p{margin:0 0 20px;color:var(--muted)}
+
+/* ===== shell ===== */
+.shell{display:flex;min-height:100vh}
+.sidebar{width:248px;flex:none;background:linear-gradient(180deg,var(--side) 0%,var(--side2) 100%);color:var(--side-ink);
+  display:flex;flex-direction:column;padding:22px 16px;position:sticky;top:0;height:100vh;z-index:20}
+.brand{padding:0 6px 18px;border-bottom:1px solid var(--side-line)}
+.brand b{display:block;font-size:15px;font-weight:600}
+.brand span{font-size:13px;color:var(--side-muted)}
+.usercard{display:flex;gap:12px;align-items:center;margin:16px 0;padding:12px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid var(--side-line)}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--gold);color:var(--side);display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+.usercard b{display:block;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
+.usercard span{font-size:12px;color:var(--side-muted)}
+.branchbox{margin:0 0 14px}
+.branchbox label{color:var(--side-muted);font-size:12.5px;margin:0 0 6px 2px}
+.branchbox select{background:rgba(255,255,255,.08);color:#fff;border:1.5px solid var(--gold);border-radius:10px;padding:10px 12px;font-weight:500;cursor:pointer}
+.branchbox select option{color:var(--ink)}
+.livebox{font-size:12px;color:var(--side-muted);padding:0 6px 14px;border-bottom:1px solid var(--side-line);display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:#facc15;flex:none}
+.dot.on{background:#4ade80;animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(74,222,128,.6)}70%{box-shadow:0 0 0 7px rgba(74,222,128,0)}100%{box-shadow:0 0 0 0 rgba(74,222,128,0)}}
+nav{margin-top:14px;display:flex;flex-direction:column;gap:4px}
+.nav{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;color:var(--side-ink);background:none;border:0;border-left:3px solid transparent;cursor:pointer;text-align:left;font-size:14.5px}
+.nav svg{width:18px;height:18px;flex:none;opacity:.85}
+.nav:hover{background:rgba(255,255,255,.05)}
+.nav.active{background:linear-gradient(90deg,rgba(224,180,58,.22),rgba(224,180,58,.04));border-left-color:var(--gold)}
+.nav .badge{margin-left:auto;background:var(--gold);color:var(--side);font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:10px;display:grid;place-items:center;padding:0 6px}
+.side-foot{margin-top:auto}
+.logout{width:100%;padding:11px;border-radius:10px;background:transparent;color:var(--side-ink);border:1px solid rgba(255,255,255,.18);cursor:pointer;display:flex;gap:8px;justify-content:center;align-items:center}
+.logout:hover{background:rgba(255,255,255,.06)}
+
+.main{flex:1;min-width:0;padding:22px 32px 40px}
+.topbar{display:none}
+.demo-banner{background:#facc15;color:#422006;text-align:center;font-size:13px;padding:6px 12px;border-radius:10px;margin-bottom:14px}
+
+/* ===== KPI cards ===== */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
+.kpi .lbl{font-size:13px;color:var(--ink);font-weight:500;opacity:.85}
+.kpi .val{font-size:26px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums;line-height:1.2}
+.kpi .sub{font-size:12px;color:var(--muted);margin-top:4px}
+.kpi.green .val{color:var(--free)}
+.kpi.red .val{color:var(--bad)}
+.kpi.hi{background:linear-gradient(135deg,var(--purple) 0%,var(--purple2) 100%);border-color:transparent;color:#fff;box-shadow:0 10px 24px rgba(59,37,96,.25)}
+.kpi.hi .lbl{color:#fff}
+.kpi.hi .sub{color:rgba(255,255,255,.75)}
+
+/* ===== cards ===== */
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px 26px;margin-bottom:18px}
+.card-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.card-h h2{font-family:var(--serif);font-weight:600;font-size:20px;margin:0;flex:1}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:2px 4px;border-radius:6px}
+.legend span.active{background:var(--line);color:var(--ink)}
+.legend i{width:12px;height:12px;border-radius:3px;border:1px solid}
+.tools{display:flex;gap:8px;width:100%;justify-content:flex-end;margin-top:-4px;margin-bottom:6px}
+
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 14px;cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--purple);color:#fff;border-color:var(--purple)}
+.btn.primary:hover{background:var(--purple2)}
+.btn.danger{background:var(--bad);color:#fff;border-color:var(--bad)}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* room groups */
+.group{margin-top:18px}
+.group:first-of-type{margin-top:6px}
+.group-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px}
+.group-h b{font-size:14px;font-weight:600}
+.group-h span{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:12px}
+.tile{border-radius:14px;border:1px solid;padding:14px 14px 12px;cursor:pointer;min-height:112px;display:flex;flex-direction:column;transition:transform .12s,box-shadow .12s}
+.tile:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(29,23,48,.08)}
+.tile .no{font-family:var(--serif);font-size:24px;font-weight:600;color:#6d6585;line-height:1.1}
+.tile .st{font-size:12.5px;font-weight:600;margin-top:6px}
+.tile .x{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-available{background:var(--free-bg);border-color:var(--free-line)} .t-available .st{color:var(--free)}
+.t-occupied{background:var(--occ-bg);border-color:var(--occ-line)} .t-occupied .st{color:var(--occ)}
+.t-booked_guest_out{background:var(--out-bg);border-color:var(--out-line)} .t-booked_guest_out .st{color:var(--out)}
+.t-unregistered{background:var(--bad-bg);border-color:var(--bad)} .t-unregistered .st{color:var(--bad)}
+.t-sensor_offline,.t-no_sensor{background:var(--off-bg);border-color:var(--off-line)} .t-sensor_offline .st,.t-no_sensor .st{color:var(--off)}
+
+/* tables & lists */
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:11px 10px;border-bottom:1px solid var(--line)}
+th{font-size:12px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.03em}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.click{cursor:pointer} tr.click:hover td{background:#faf9fc}
+.empty{padding:16px 4px;color:var(--muted)}
+.list{list-style:none;margin:0;padding:0}
+.list li{padding:13px 4px;border-bottom:1px solid var(--line)}
+.list li:last-child{border-bottom:0}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.meta{font-size:12px;color:var(--muted)}
+.tag{font-size:11.5px;padding:2px 9px;border-radius:999px;background:var(--off-bg);color:var(--muted);white-space:nowrap}
+.tag.bad{background:var(--bad-bg);color:var(--bad)}
+.tag.ok{background:var(--free-bg);color:var(--free)}
+.neg{color:var(--bad)}
+
+/* modal */
+dialog{border:0;border-radius:18px;padding:0;width:min(460px,calc(100vw - 32px));background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(29,23,48,.5)}
+.m-h{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center}
+.m-h h3{margin:0;font-family:var(--serif);font-size:18px;font-weight:600;flex:1}
+.m-b{padding:18px 20px}
+.m-f{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+label{display:block;font-size:12.5px;color:var(--muted);margin:10px 0 4px}
+input,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#faf9fc}
+input:focus,select:focus{outline:2px solid var(--purple2);outline-offset:-1px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:7px 14px;margin:0}
+.kv dt{color:var(--muted)} .kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.err{color:var(--bad);font-size:13px;margin-top:10px;min-height:1em}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--side);color:#fff;padding:11px 18px;border-radius:12px;font-size:14px;z-index:60;max-width:calc(100vw - 32px)}
+
+/* ===== responsive ===== */
+@media (max-width:1100px){ .kpis{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:860px){
+  .sidebar{position:fixed;left:0;top:0;transform:translateX(-100%);transition:transform .2s;box-shadow:0 0 40px rgba(0,0,0,.3)}
+  .sidebar.open{transform:none}
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:15}
+  .topbar{display:flex;align-items:center;gap:12px;background:var(--side);color:#fff;padding:12px 16px;position:sticky;top:0;z-index:10}
+  .topbar b{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .menu{background:none;border:0;color:#fff;padding:4px;cursor:pointer;display:grid}
+  .main{padding:14px 16px 32px}
+  .card{padding:18px 16px}
+}
+@media (max-width:480px){
+  .kpis{gap:10px}
+  .kpi{padding:14px}
+  .kpi .val{font-size:20px}
+  .tiles{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .tile{min-height:96px;padding:10px}
+  .tile .no{font-size:20px}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<section id="loginView" class="login hidden">
+  <form id="loginForm">
+    <h1 id="loginTitle">Hotel Dashboard</h1>
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username" required>
+    <label for="password">Password</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <div class="err" id="loginErr"></div>
+    <button class="btn primary" style="width:100%;margin-top:8px;padding:11px" type="submit">Sign in</button>
+  </form>
+</section>
+
+<!-- ================= APP ================= -->
+<div id="appView" class="shell hidden">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><b id="hotelTitle">Hotel</b><span id="hotelSub">Owner dashboard</span></div>
+    <div class="usercard"><div class="avatar" id="avatar">--</div><div><b id="who">—</b><span id="whoRole">Hotel owner</span></div></div>
+    <div class="branchbox"><label for="branchSel">Branch you are viewing</label><select id="branchSel"><option value="all">All branches</option></select></div>
+    <div class="livebox"><span class="dot" id="liveDot"></span><span id="liveTxt">Connecting…</span></div>
+    <nav id="nav">
+      <button class="nav active" data-view="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Overview</button>
+      <button class="nav" data-view="guests"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10V20M21 14V20M3 14h18M3 14v-2a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><circle cx="7" cy="7" r="2"/></svg>Guests</button>
+      <button class="nav" data-view="payments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h13l-3-3M20 17H7l3 3"/></svg>Payments</button>
+      <button class="nav" data-view="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Reports</button>
+      <button class="nav" data-view="alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4"/></svg>Alerts<span class="badge hidden" id="navBadge">0</span></button>
+    </nav>
+    <div class="side-foot"><button class="logout" id="logoutBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 12H4m0 0 4-4m-4 4 4 4M14 4h5a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-5"/></svg><span id="logoutTxt">Sign out</span></button></div>
+  </aside>
+  <div class="scrim hidden" id="scrim"></div>
+
+  <div class="main-wrap" style="flex:1;min-width:0">
+    <div class="topbar"><button class="menu" id="menuBtn" aria-label="Menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button><b id="topTitle">Hotel</b><span class="dot" id="liveDot2"></span></div>
+    <main class="main">
+      <div id="demoBanner" class="demo-banner hidden">DEMO MODE: sample data, nothing is saved. <a href="?">Exit demo</a></div>
+      <div id="loadErr" class="hidden" style="background:var(--bad-bg);border:1px solid var(--bad);color:var(--bad);border-radius:12px;padding:12px 16px;margin-bottom:14px;font-size:13.5px"></div>
+      <div class="kpis" id="kpis"></div>
+
+      <!-- OVERVIEW -->
+      <section data-section="overview">
+        <div class="card">
+          <div class="card-h"><h2 id="roomsTitle">Rooms</h2><div class="legend" id="legend"></div></div>
+          <div class="tools" id="tools"><button class="btn sm" id="addRoomBtn">+ Room</button><button class="btn sm primary" id="checkInBtn">Check in guest</button></div>
+          <div id="roomGroups"></div>
+        </div>
+      </section>
+
+      <!-- GUESTS -->
+      <section data-section="guests" class="hidden">
+        <div class="card">
+          <div class="card-h"><h2>Guests in house</h2><button class="btn sm primary" data-action="checkin">Check in guest</button></div>
+          <div class="tablewrap"><table>
+            <thead><tr><th>Room</th><th>Guest</th><th>Phone</th><th>Since</th><th class="num">Due</th><th class="num">Paid</th><th class="num">Balance</th></tr></thead>
+            <tbody id="guestRows"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- PAYMENTS -->
+      <section data-section="payments" class="hidden">
+        <div class="card">
+          <div class="card-h"><h2>Payments this month</h2><span class="meta" id="payTotal"></span></div>
+          <div class="tablewrap"><table>
+            <thead><tr><th>Date</th><th>Room</th><th>Guest</th><th>Method</th><th class="num">Amount</th></tr></thead>
+            <tbody id="payRows"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- REPORTS -->
+      <section data-section="reports" class="hidden">
+        <div class="card" id="branchCard">
+          <div class="card-h"><h2>By branch</h2><span class="meta">today and this month</span></div>
+          <div class="tablewrap"><table><thead><tr><th>Branch</th><th class="num">Rooms</th><th class="num">Checked in</th><th class="num">Today</th><th class="num">This month</th><th class="num">Unregistered use</th></tr></thead><tbody id="branchRows"></tbody></table></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h2>This month</h2></div>
+          <dl class="kv" id="reportKv" style="max-width:520px"></dl>
+        </div>
+        <div class="card">
+          <div class="card-h"><h2>Collections by method</h2></div>
+          <div class="tablewrap"><table><thead><tr><th>Method</th><th class="num">Payments</th><th class="num">Amount</th></tr></thead><tbody id="methodRows"></tbody></table></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h2>Bed activity</h2></div>
+          <ul class="list" id="events"></ul>
+        </div>
+      </section>
+
+      <!-- ALERTS -->
+      <section data-section="alerts" class="hidden">
+        <div class="card">
+          <div class="card-h"><h2>Open alerts</h2></div>
+          <ul class="list" id="alertsOpen"></ul>
+        </div>
+        <div class="card">
+          <div class="card-h"><h2>Resolved this month</h2></div>
+          <ul class="list" id="alertsDone"></ul>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<dialog id="modal">
+  <div class="m-h"><h3 id="mTitle"></h3><button class="btn sm" data-close>✕</button></div>
+  <div class="m-b" id="mBody"></div>
+  <div class="m-f" id="mFoot"></div>
+</dialog>
+
+<script>
+/* =================== SETTINGS =================== */
+const SUPABASE_URL = 'https://iiwkmueaxhamahwjiowj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_2Vl4-VoXBHw7P-ApbphxeA_pG5GTxdt';
+const HOTEL_NAME   = 'GANAFA HOTEL';         // company name (branches come from the database)
+const HOTEL_SUB    = 'General report';       // second line under the name
+const OWNER_NAME   = 'Muhizi';               // shown on the user card
+const OWNER_ROLE   = 'Director General';     // shown under the name
+const READ_ONLY    = true;                   // true = view reports only (no check-in, payments, rooms)
+const CURRENCY     = 'TZS';
+const PAY_METHODS  = ['Cash','M-Pesa','Mixx by Yas','Airtel Money','HaloPesa','Card','Bank'];
+/* ================================================ */
+
+const DEMO = false;   // real system: demo mode switched off
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num = n => Math.round(Number(n)||0).toLocaleString('en-US');
+const money = n => CURRENCY + ' ' + num(n);
+const fmtTime = d => d ? new Date(d).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
+const fmtClock = d => d ? new Date(d).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '—';
+const fmtDate = d => new Date(d).toLocaleDateString('en-GB');
+function ago(d){
+  if(!d) return '—';
+  const m = Math.max(0, Math.round((Date.now() - new Date(d)) / 60000));
+  if (m < 1) return 'just now';
+  if (m < 60) return m + ' min';
+  const h = Math.floor(m/60); if (h < 24) return h + 'h ' + (m%60) + 'm';
+  return Math.floor(h/24) + 'd ' + (h%24) + 'h';
+}
+function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3500); }
+
+const STATUS = {
+  available:        {label:'Available',      color:'var(--free)', bg:'var(--free-bg)', line:'var(--free-line)'},
+  occupied:         {label:'Occupied',       color:'var(--occ)',  bg:'var(--occ-bg)',  line:'var(--occ-line)'},
+  booked_guest_out: {label:'Guest out',      color:'var(--out)',  bg:'var(--out-bg)',  line:'var(--out-line)'},
+  unregistered:     {label:'Not registered', color:'var(--bad)',  bg:'var(--bad-bg)',  line:'var(--bad)'},
+  sensor_offline:   {label:'Offline',        color:'var(--off)',  bg:'var(--off-bg)',  line:'var(--off-line)'},
+  no_sensor:        {label:'No sensor',      color:'var(--off)',  bg:'var(--off-bg)',  line:'var(--off-line)'},
+};
+
+let data = {status:[], rooms:[], bookings:[], payments:[], alerts:[], events:[], branches:[]};
+let filter = null;
+let sb = null, userId = null;
+
+/* =================== DATA LAYER (live) =================== */
+const live = {
+  async load(){
+    const ms = new Date(); ms.setDate(1); ms.setHours(0,0,0,0);
+    const iso = ms.toISOString();
+    const q = await Promise.all([
+      sb.from('room_status').select('*').order('room_no'),
+      sb.from('rooms').select('id,room_no,room_type,rate,branch_id').order('room_no'),
+      sb.from('bookings').select('id,room_id,guest_name,guest_phone,check_in,nights,rate,amount_due,status,payments(amount)').eq('status','checked_in'),
+      sb.from('payments').select('id,amount,method,paid_at,booking_id,bookings(guest_name,room_id)').gte('paid_at', iso).order('paid_at',{ascending:false}),
+      sb.from('alerts').select('id,room_id,kind,message,resolved,created_at').or(`resolved.eq.false,created_at.gte."${iso}"`).order('created_at',{ascending:false}),
+      sb.from('sensor_events').select('id,device_id,occupied,event,created_at').order('created_at',{ascending:false}).limit(40),
+      sb.from('branches').select('id,name').order('name'),
+    ]);
+    // Show whatever loads; collect errors so the owner sees exactly what failed
+    const names = ['room_status','rooms','bookings','payments','alerts','sensor_events','branches'];
+    const errors = q.map((r,i)=>r.error ? names[i] + ': ' + r.error.message : null).filter(Boolean);
+    return {status:q[0].data||[], rooms:q[1].data||[], bookings:q[2].data||[], payments:q[3].data||[],
+            alerts:q[4].data||[], events:q[5].data||[], branches:q[6].data||[], errors};
+  },
+  async checkIn(b, paid, method){
+    const {data:bk, error} = await sb.from('bookings').insert({
+      room_id:b.room_id, guest_name:b.guest_name, guest_phone:b.guest_phone || null,
+      nights:b.nights, rate:b.rate, amount_due:b.nights*b.rate,
+      status:'checked_in', check_in:new Date().toISOString(), created_by:userId
+    }).select('id').single();
+    if (error) throw error;
+    if (paid > 0) await live.addPayment(bk.id, paid, method);
+  },
+  async addPayment(booking_id, amount, method){
+    const {error} = await sb.from('payments').insert({booking_id, amount, method});
+    if (error) throw error;
+  },
+  async checkOut(booking_id){
+    const {error} = await sb.from('bookings').update({status:'checked_out', check_out:new Date().toISOString()}).eq('id', booking_id);
+    if (error) throw error;
+  },
+  async resolveAlert(id){
+    const {error} = await sb.from('alerts').update({resolved:true, resolved_by:userId}).eq('id', id);
+    if (error) throw error;
+  },
+  async addRoom(room_no, room_type, rate){
+    const branch_id = branchSel !== 'all' ? branchSel : (data.branches[0]?.id || null);
+    const {data:r, error} = await sb.from('rooms').insert({room_no, room_type, rate, branch_id}).select('id').single();
+    if (error) throw error;
+    const e2 = (await sb.from('beds').insert({room_id:r.id, label:'A'})).error;
+    if (e2) throw e2;
+  }
+};
+
+/* =================== DATA LAYER (demo) =================== */
+const demo = (() => {
+  const now = Date.now(), H = 3600e3, M = 60e3;
+  const branches = [{id:'br1',name:'GANAFA HOTEL (MBEZI)'},{id:'br2',name:'GANAFA HOTEL (NGARA)'}];
+  const rooms = [
+    ...Array.from({length:8},(_,i)=>[String(i+1),'Self Contained',30000,'br1']),
+    ...Array.from({length:2},(_,i)=>[String(i+9),'Normal',25000,'br1']),
+    ...Array.from({length:3},(_,i)=>[String(i+1),'Self Contained',25000,'br2']),
+    ['4','Normal',20000,'br2'],
+  ].map(([room_no,room_type,rate,branch_id],i)=>({id:'r'+i, room_no, room_type, rate, branch_id}));
+  const sensors = {
+    r0:{dev:'GANAFA 1',occ:true, since:now-5*H, seen:now-2*M},
+    r1:{dev:'GANAFA 2',occ:false,since:null,   seen:now-3*M},
+    r2:{dev:'GANAFA 3',occ:true, since:now-1.5*H,seen:now-1*M},
+    r3:{dev:'GANAFA 4',occ:false,since:null,   seen:now-4*M},
+    r4:{dev:'GANAFA 5',occ:true, since:now-40*M,seen:now-2*M},
+    r5:{dev:'GANAFA 6',occ:false,since:null,   seen:now-50*M},
+    r6:{dev:'GANAFA 7',occ:false,since:null,   seen:now-1*M},
+    r7:{dev:'GANAFA 8',occ:false,since:null,seen:now-2*M},
+    r8:{dev:'GANAFA 9',occ:false,since:null,seen:now-2*M}, r9:{dev:'GANAFA 10',occ:false,since:null,seen:now-1*M},
+    r10:{dev:'GANAFA 11',occ:true,since:now-3*H,seen:now-1*M}, r11:{dev:'GANAFA 12',occ:false,since:null,seen:now-2*M},
+    r12:{dev:'GANAFA 13',occ:false,since:null,seen:now-3*M}, r13:{dev:null},
+  };
+  let bookings = [
+    {id:'b1',room_id:'r0',guest_name:'Juma Mwakalinga',guest_phone:'0754 000 111',check_in:new Date(now-6*H).toISOString(),nights:2,rate:30000,amount_due:60000,status:'checked_in'},
+    {id:'b2',room_id:'r2',guest_name:'Neema Kileo',guest_phone:'',check_in:new Date(now-2*H).toISOString(),nights:1,rate:30000,amount_due:30000,status:'checked_in'},
+    {id:'b3',room_id:'r3',guest_name:'Peter Massawe',guest_phone:'0713 222 333',check_in:new Date(now-26*H).toISOString(),nights:3,rate:30000,amount_due:90000,status:'checked_in'},
+    {id:'b4',room_id:'r10',guest_name:'Asha Ndege',guest_phone:'0688 444 555',check_in:new Date(now-3.2*H).toISOString(),nights:1,rate:25000,amount_due:25000,status:'checked_in'},
+  ];
+  let payments = [
+    {id:1,booking_id:'b1',amount:60000,method:'M-Pesa',paid_at:new Date(now-6*H).toISOString()},
+    {id:2,booking_id:'b2',amount:20000,method:'Cash',paid_at:new Date(now-2*H).toISOString()},
+    {id:3,booking_id:'b3',amount:60000,method:'Mixx by Yas',paid_at:new Date(now-26*H).toISOString()},
+  ];
+  let alerts = [
+    {id:3,room_id:'r12',kind:'unregistered_occupancy',message:'Bed occupied but no guest is checked in to this room',resolved:true,created_at:new Date(now-30*H).toISOString()},
+    {id:1,room_id:'r4',kind:'unregistered_occupancy',message:'Bed occupied but no guest is checked in to this room',resolved:false,created_at:new Date(now-40*M).toISOString()},
+    {id:2,room_id:'r6',kind:'unregistered_occupancy',message:'Bed occupied but no guest is checked in to this room',resolved:true,created_at:new Date(now-3*24*H).toISOString()},
+  ];
+  const events = [
+    {id:5,device_id:'GANAFA 5',occupied:true,event:'change',created_at:new Date(now-40*M).toISOString()},
+    {id:4,device_id:'GANAFA 3',occupied:true,event:'change',created_at:new Date(now-1.5*H).toISOString()},
+    {id:3,device_id:'GANAFA 4',occupied:false,event:'change',created_at:new Date(now-3*H).toISOString()},
+    {id:2,device_id:'GANAFA 1',occupied:true,event:'change',created_at:new Date(now-5*H).toISOString()},
+  ];
+  let pid = 10, bid = 10;
+  function status(){
+    return rooms.map(r=>{
+      const s = sensors[r.id] || {dev:null};
+      const bk = bookings.find(b=>b.room_id===r.id && b.status==='checked_in');
+      let st;
+      if (!s.dev) st='no_sensor';
+      else if (Date.now()-s.seen > 15*M) st='sensor_offline';
+      else if (bk && s.occ) st='occupied';
+      else if (bk) st='booked_guest_out';
+      else if (s.occ) st='unregistered';
+      else st='available';
+      return {room_id:r.id, room_no:r.room_no, branch_id:r.branch_id, bed_id:r.id+'a', bed:'A', device_id:s.dev,
+        is_occupied:!!s.occ, occupied_since:s.since?new Date(s.since).toISOString():null,
+        last_seen:s.seen?new Date(s.seen).toISOString():null,
+        booking_id:bk?.id||null, guest_name:bk?.guest_name||null, status:st};
+    });
+  }
+  return {
+    async load(){
+      const bk = bookings.filter(b=>b.status==='checked_in').map(b=>({...b,payments:payments.filter(p=>p.booking_id===b.id)}));
+      const pays = payments.map(p=>{const b=bookings.find(x=>x.id===p.booking_id);return {...p,bookings:b?{guest_name:b.guest_name,room_id:b.room_id}:null}})
+                           .sort((a,b)=>b.paid_at.localeCompare(a.paid_at));
+      return {status:status(), rooms:[...rooms], bookings:bk, payments:pays, alerts:[...alerts], events:[...events], branches:[...branches]};
+    },
+    async checkIn(b, paid, method){
+      if (bookings.some(x=>x.room_id===b.room_id && x.status==='checked_in')) throw {message:'duplicate key: one_active_booking_per_room'};
+      const id='b'+(bid++);
+      bookings.push({id,...b,amount_due:b.nights*b.rate,status:'checked_in',check_in:new Date().toISOString()});
+      if (paid>0) payments.push({id:pid++,booking_id:id,amount:paid,method,paid_at:new Date().toISOString()});
+    },
+    async addPayment(booking_id, amount, method){ payments.push({id:pid++,booking_id,amount,method,paid_at:new Date().toISOString()}); },
+    async checkOut(id){ const b=bookings.find(x=>x.id===id); b.status='checked_out'; },
+    async resolveAlert(id){ alerts.find(a=>a.id===id).resolved=true; },
+    async addRoom(room_no, room_type, rate){
+      if (rooms.some(r=>r.room_no===room_no)) throw {message:'duplicate key: rooms_room_no_key'};
+      rooms.push({id:'r'+(rooms.length+20),room_no,room_type,rate});
+    }
+  };
+})();
+
+const api = DEMO ? demo : live;
+
+/* =================== RENDER =================== */
+function balanceOf(b){ const paid=(b.payments||[]).reduce((s,p)=>s+Number(p.amount),0); return {paid, bal:Number(b.amount_due)-paid}; }
+function roomById(id){ return data.rooms.find(r=>r.id===id); }
+const shortBranch = name => { const m = /\(([^)]+)\)/.exec(name||''); return m ? m[1] : (name||''); };
+function branchName(id){ return (data.branches||[]).find(b=>b.id===id)?.name || ''; }
+// "Room 5" when one branch is selected, "Room 5 · MBEZI" when viewing all branches
+function roomLabel(roomId){
+  const r = roomById(roomId); if (!r) return '?';
+  return esc(r.room_no) + (branchSel==='all' && (data.branches||[]).length>1 && r.branch_id ? ' · ' + esc(shortBranch(branchName(r.branch_id))) : '');
+}
+function roomIdByDevice(dev){ return data.status.find(s=>s.device_id===dev)?.room_id; }
+
+let branchSel = 'all';
+try { branchSel = localStorage.getItem('hotelBranch') || 'all'; } catch(e){}
+
+function scope(full, id){
+  if (id === 'all') return full;
+  const rooms = full.rooms.filter(r=>r.branch_id===id);
+  const ids = new Set(rooms.map(r=>r.id));
+  return {...full, rooms,
+    status:   full.status.filter(s=>ids.has(s.room_id)),
+    bookings: full.bookings.filter(b=>ids.has(b.room_id)),
+    payments: full.payments.filter(p=>ids.has(p.bookings?.room_id)),
+    alerts:   full.alerts.filter(a=>ids.has(a.room_id)),
+    events:   full.events.filter(e=>ids.has(full.status.find(s=>s.device_id===e.device_id)?.room_id)),
+  };
+}
+
+function renderBranchPicker(){
+  const sel = $('#branchSel');
+  const list = data.branches || [];
+  if (branchSel!=='all' && !list.some(b=>b.id===branchSel)) branchSel = 'all';
+  sel.innerHTML = '<option value="all">All branches</option>' + list.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('');
+  sel.value = branchSel;
+  const name = branchSel==='all' ? (list.length>1 ? 'All branches · General report' : HOTEL_SUB) : branchName(branchSel);
+  $('#hotelSub').textContent = name;
+  $('#topTitle').textContent = branchSel==='all' ? HOTEL_NAME : shortBranch(branchName(branchSel)) + ' · ' + HOTEL_NAME;
+  $('#branchCard').classList.toggle('hidden', branchSel!=='all' || list.length<2);
+}
+$('#branchSel').onchange = e => {
+  branchSel = e.target.value; filter = null;
+  try { localStorage.setItem('hotelBranch', branchSel); } catch(err){}
+  render();
+};
+
+function renderBranchTable(full){
+  const today0 = startOfToday(), month0 = startOfMonth();
+  const rows = (full.branches||[]).map(b=>{
+    const d = scope(full, b.id);
+    const today = d.payments.filter(p=>new Date(p.paid_at)>=today0).reduce((s,p)=>s+Number(p.amount),0);
+    const month = d.payments.reduce((s,p)=>s+Number(p.amount),0);
+    const leak = d.alerts.filter(a=>a.kind==='unregistered_occupancy' && new Date(a.created_at)>=month0).length;
+    return `<tr class="click" data-branch="${b.id}"><td><b>${esc(b.name)}</b></td><td class="num">${d.rooms.length}</td><td class="num">${d.bookings.length}</td>
+      <td class="num">${num(today)}</td><td class="num">${num(month)}</td><td class="num ${leak?'neg':''}">${leak}</td></tr>`;
+  });
+  $('#branchRows').innerHTML = rows.join('') || '<tr><td colspan="6" class="empty">No branches yet.</td></tr>';
+}
+
+function render(){
+  const full = data;
+  renderBranchPicker();
+  renderBranchTable(full);
+  data = scope(full, branchSel);
+  try { renderView(); } finally { data = full; }
+}
+const byRoomNo = (a,b) => String(a).localeCompare(String(b), undefined, {numeric:true});
+const startOfToday = () => { const d=new Date(); d.setHours(0,0,0,0); return d; };
+const startOfMonth = () => { const d=new Date(); d.setDate(1); d.setHours(0,0,0,0); return d; };
+
+function renderView(){
+  const st = data.status;
+  const today0 = startOfToday(), month0 = startOfMonth();
+  const todayPays = data.payments.filter(p=>new Date(p.paid_at)>=today0);
+  const today = todayPays.reduce((s,p)=>s+Number(p.amount),0);
+  const roomsTotal = data.rooms.length;
+  const checkedIn = data.bookings.length;
+  const leak = data.alerts.filter(a=>a.kind==='unregistered_occupancy' && new Date(a.created_at)>=month0);
+  const leakAmt = leak.reduce((s,a)=>s+Number(roomById(a.room_id)?.rate||0),0);
+  const openAlerts = data.alerts.filter(a=>!a.resolved);
+
+  // ----- KPI cards -----
+  $('#kpis').innerHTML = `
+    <div class="kpi green"><div class="lbl">Rooms available</div><div class="val">${roomsTotal-checkedIn}</div><div class="sub">of ${roomsTotal}</div></div>
+    <div class="kpi red"><div class="lbl">Rooms checked in</div><div class="val">${checkedIn}</div><div class="sub">of ${roomsTotal} · ${st.filter(s=>s.is_occupied).length} beds in use</div></div>
+    <div class="kpi hi"><div class="lbl">Room sales today</div><div class="val">${money(today)}</div><div class="sub">${todayPays.length} payment(s)</div></div>
+    <div class="kpi"><div class="lbl">Possible unrecorded</div><div class="val" style="color:${leakAmt?'var(--bad)':'inherit'}">${money(leakAmt)}</div><div class="sub">${leak.length} unregistered use · ${fmtDate(new Date())}</div></div>`;
+
+  // ----- sidebar badge -----
+  $('#navBadge').textContent = openAlerts.length;
+  $('#navBadge').classList.toggle('hidden', !openAlerts.length);
+
+  // ----- legend -----
+  const counts = {}; st.forEach(s=>counts[s.status]=(counts[s.status]||0)+1);
+  $('#roomsTitle').textContent = 'Rooms ' + roomsTotal;
+  $('#legend').innerHTML = Object.entries(STATUS).filter(([k])=>counts[k]).map(([k,v])=>
+    `<span data-filter="${filter===k?'':k}" class="${filter===k?'active':''}"><i style="background:${v.bg};border-color:${v.line}"></i>${v.label} ${counts[k]}</span>`).join('');
+
+  // ----- rooms grouped by type -----
+  const groups = {};
+  data.rooms.slice().sort((a,b)=>String(branchName(a.branch_id)).localeCompare(branchName(b.branch_id)) || byRoomNo(a.room_no,b.room_no)).forEach(r=>{
+    const key = (branchSel==='all' ? (r.branch_id||'') : '') + '|' + (r.room_type||'Other') + '|' + Number(r.rate||0);
+    (groups[key] ||= {type:r.room_type||'Other', rate:r.rate, branch:r.branch_id, rooms:[]}).rooms.push(r);
+  });
+  const html = Object.values(groups).map(g=>{
+    const tiles = g.rooms.flatMap(r=>{
+      const beds = st.filter(s=>s.room_id===r.id);
+      const list = beds.length ? beds : [{room_id:r.id, room_no:r.room_no, status:'no_sensor'}];
+      return list.filter(s=>!filter || s.status===filter).map(s=>{
+        const meta = STATUS[s.status] || {label:s.status};
+        let x = num(r.rate);
+        if (s.guest_name) x = esc(s.guest_name);
+        else if (s.status==='unregistered') x = 'On bed ' + ago(s.occupied_since);
+        else if (s.status==='sensor_offline') x = 'Seen ' + ago(s.last_seen) + ' ago';
+        return `<div class="tile t-${s.status}" data-room="${r.id}" title="${meta.label}">
+          <div class="no">${esc(r.room_no)}${beds.length>1?'<small style="font-size:13px"> '+esc(s.bed)+'</small>':''}</div>
+          <div class="st">${meta.label}</div><div class="x">${x}</div></div>`;
+      });
+    });
+    if (!tiles.length) return '';
+    const free = g.rooms.filter(r=>!data.bookings.some(b=>b.room_id===r.id)).length;
+    return `<div class="group"><div class="group-h">
+        <b>${branchSel==='all' && (data.branches||[]).length>1 && g.branch ? esc(shortBranch(branchName(g.branch)))+' · ' : ''}${esc(g.type)} · ${g.rooms.length} room${g.rooms.length>1?'s':''} · ${money(g.rate)} per night</b>
+        <span>${free} available</span></div>
+      <div class="tiles">${tiles.join('')}</div></div>`;
+  }).join('');
+  $('#roomGroups').innerHTML = html || '<div class="empty">No rooms yet. Add one with “+ Room”.</div>';
+
+  // ----- guests -----
+  $('#guestRows').innerHTML = data.bookings.length ? data.bookings
+    .map(b=>({b, r:roomById(b.room_id), ...balanceOf(b)}))
+    .sort((x,y)=>byRoomNo(x.r?.room_no,y.r?.room_no))
+    .map(({b,r,paid,bal})=>`<tr class="click" data-room="${b.room_id}">
+      <td><b>${roomLabel(b.room_id)}</b></td><td>${esc(b.guest_name)}</td><td>${esc(b.guest_phone||'—')}</td><td>${fmtTime(b.check_in)}</td>
+      <td class="num">${num(b.amount_due)}</td><td class="num">${num(paid)}</td>
+      <td class="num ${bal>0?'neg':''}">${num(bal)}</td></tr>`).join('')
+    : '<tr><td colspan="7" class="empty">No guests checked in.</td></tr>';
+
+  // ----- payments -----
+  const month = data.payments.reduce((s,p)=>s+Number(p.amount),0);
+  $('#payTotal').textContent = data.payments.length + ' payments · ' + money(month);
+  $('#payRows').innerHTML = data.payments.length ? data.payments.map(p=>`<tr>
+      <td>${fmtTime(p.paid_at)}</td><td>${roomLabel(p.bookings?.room_id)}</td>
+      <td>${esc(p.bookings?.guest_name||'')}</td><td>${esc(p.method)}</td><td class="num">${num(p.amount)}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="empty">No payments this month.</td></tr>';
+
+  // ----- reports -----
+  const outstanding = data.bookings.reduce((s,b)=>s+Math.max(0,balanceOf(b).bal),0);
+  const beds = st.filter(s=>s.device_id).length;
+  $('#reportKv').innerHTML = `
+    <dt>Collected this month</dt><dd><b>${money(month)}</b></dd>
+    <dt>Collected today</dt><dd>${money(today)}</dd>
+    <dt>Unpaid by guests in house</dt><dd>${money(outstanding)}</dd>
+    <dt>Unregistered bed use this month</dt><dd class="${leak.length?'neg':''}">${leak.length} time(s) · ${money(leakAmt)}</dd>
+    <dt>Rooms checked in now</dt><dd>${checkedIn} of ${roomsTotal}</dd>
+    <dt>Beds in use now (sensors)</dt><dd>${st.filter(s=>s.is_occupied).length} of ${beds}</dd>
+    <dt>Sensors offline</dt><dd>${st.filter(s=>s.status==='sensor_offline').length}</dd>`;
+  const byMethod = {};
+  data.payments.forEach(p=>{ const m=byMethod[p.method] ||= {n:0,a:0}; m.n++; m.a+=Number(p.amount); });
+  $('#methodRows').innerHTML = Object.keys(byMethod).length ? Object.entries(byMethod).sort((a,b)=>b[1].a-a[1].a)
+    .map(([m,v])=>`<tr><td>${esc(m)}</td><td class="num">${v.n}</td><td class="num">${num(v.a)}</td></tr>`).join('')
+    : '<tr><td colspan="3" class="empty">No payments this month.</td></tr>';
+  $('#events').innerHTML = data.events.length ? data.events.map(e=>`<li><div class="row">
+      <span>Room ${roomIdByDevice(e.device_id) ? roomLabel(roomIdByDevice(e.device_id)) : esc(e.device_id)}</span>
+      <span class="tag ${e.occupied?'bad':'ok'}">${e.occupied?'Bed occupied':'Bed empty'}</span></div>
+      <div class="meta">${fmtTime(e.created_at)}</div></li>`).join('')
+    : '<li class="empty">No bed activity yet.</li>';
+
+  // ----- alerts -----
+  $('#alertsOpen').innerHTML = openAlerts.length ? openAlerts.map(a=>`<li>
+      <div class="row"><b>Room ${roomLabel(a.room_id)}</b>${READ_ONLY ? '<span class="tag bad">Open</span>' : `<button class="btn sm" data-resolve="${a.id}">Resolve</button>`}</div>
+      <div>${esc(a.message||a.kind)}</div><div class="meta">${fmtTime(a.created_at)} · ${ago(a.created_at)} ago</div></li>`).join('')
+    : '<li class="empty">No open alerts.</li>';
+  const done = data.alerts.filter(a=>a.resolved);
+  $('#alertsDone').innerHTML = done.length ? done.map(a=>`<li><div class="row"><b>Room ${roomLabel(a.room_id)}</b><span class="tag">Resolved</span></div>
+      <div>${esc(a.message||a.kind)}</div><div class="meta">${fmtTime(a.created_at)}</div></li>`).join('')
+    : '<li class="empty">Nothing resolved this month.</li>';
+}
+
+/* =================== NAVIGATION =================== */
+function show(view){
+  document.querySelectorAll('[data-section]').forEach(s=>s.classList.toggle('hidden', s.dataset.section!==view));
+  document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active', n.dataset.view===view));
+  closeMenu();
+  window.scrollTo({top:0});
+}
+function closeMenu(){ $('#sidebar').classList.remove('open'); $('#scrim').classList.add('hidden'); }
+$('#menuBtn').onclick = () => { $('#sidebar').classList.add('open'); $('#scrim').classList.remove('hidden'); };
+$('#scrim').onclick = closeMenu;
+document.querySelectorAll('.nav').forEach(n=>n.onclick = () => show(n.dataset.view));
+
+/* =================== MODALS =================== */
+const modal = $('#modal');
+function openModal(title, body, foot){ $('#mTitle').textContent=title; $('#mBody').innerHTML=body; $('#mFoot').innerHTML=foot; modal.showModal(); }
+modal.addEventListener('click', e=>{ if (e.target.closest('[data-close]') || e.target===modal) modal.close(); });
+function friendly(err){
+  const m = err?.message || String(err);
+  if (m.includes('one_active_booking_per_room')) return 'This room already has a checked-in guest.';
+  if (m.includes('rooms_room_no_key') || m.includes('rooms_branch_room_key')) return 'A room with this number already exists in this branch.';
+  return m;
+}
+async function run(btn, fn, okMsg){
+  btn.disabled = true; if ($('#mErr')) $('#mErr').textContent='';
+  try { await fn(); modal.close(); toast(okMsg); await refresh(); }
+  catch(e){ if ($('#mErr')) $('#mErr').textContent = friendly(e); else toast(friendly(e)); }
+  finally { btn.disabled = false; }
+}
+const methodOptions = () => PAY_METHODS.map(m=>`<option>${m}</option>`).join('');
+
+function roomModal(roomId){
+  const s = data.status.find(x=>x.room_id===roomId);
+  const r = roomById(roomId);
+  const b = data.bookings.find(x=>x.room_id===roomId);
+  const meta = STATUS[s?.status || 'no_sensor'];
+  let html = `<dl class="kv">
+    <dt>Status</dt><dd><b style="color:${meta.color}">${meta.label}</b></dd>
+    <dt>Branch</dt><dd>${esc(branchName(r?.branch_id)||'—')}</dd>
+    <dt>Type / rate</dt><dd>${esc(r?.room_type||'—')} · ${money(r?.rate)}/night</dd>
+    <dt>Sensor</dt><dd>${esc(s?.device_id||'none')}</dd>
+    <dt>Last report</dt><dd>${s?.last_seen? ago(s.last_seen)+' ago':'—'}</dd>
+    <dt>Bed</dt><dd>${s?.is_occupied? 'in use for '+ago(s.occupied_since):'empty'}</dd>`;
+  let foot;
+  if (b){
+    const {paid,bal} = balanceOf(b);
+    html += `<dt>Guest</dt><dd>${esc(b.guest_name)}</dd>
+      <dt>Phone</dt><dd>${esc(b.guest_phone||'—')}</dd>
+      <dt>Checked in</dt><dd>${fmtTime(b.check_in)}</dd>
+      <dt>Nights</dt><dd>${b.nights} × ${money(b.rate)}</dd>
+      <dt>Total due</dt><dd>${money(b.amount_due)}</dd>
+      <dt>Paid</dt><dd>${money(paid)}</dd>
+      <dt>Balance</dt><dd><b class="${bal>0?'neg':''}">${money(bal)}</b></dd>`;
+    foot = `<button class="btn" data-close>Close</button><button class="btn" id="mPay">Add payment</button><button class="btn danger" id="mOut">Check out</button>`;
+  } else {
+    foot = `<button class="btn" data-close>Close</button><button class="btn primary" id="mIn">Check in guest</button>`;
+  }
+  if (READ_ONLY) foot = `<button class="btn" data-close>Close</button>`;
+  openModal('Room ' + (r?.room_no||''), html + '</dl>', foot);
+  $('#mIn')?.addEventListener('click', ()=>checkInModal(roomId));
+  $('#mPay')?.addEventListener('click', ()=>paymentModal(b));
+  $('#mOut')?.addEventListener('click', ()=>checkOutModal(b));
+}
+
+function checkInModal(preRoom){
+  const free = data.rooms.filter(r=>!data.bookings.some(b=>b.room_id===r.id)).sort((a,b)=>byRoomNo(a.room_no,b.room_no));
+  if (!free.length){ toast('All rooms already have checked-in guests.'); return; }
+  const sel = free.some(r=>r.id===preRoom) ? preRoom : free[0].id;
+  openModal('Check in guest', `
+    <label>Room</label><select id="fRoom">${free.map(r=>`<option value="${r.id}" ${r.id===sel?'selected':''}>${esc(r.room_no)} · ${esc(r.room_type||'')} · ${money(r.rate)}</option>`).join('')}</select>
+    <label>Guest name</label><input id="fName" required>
+    <label>Phone</label><input id="fPhone" type="tel" placeholder="optional">
+    <div class="grid2">
+      <div><label>Nights</label><input id="fNights" type="number" min="1" value="1"></div>
+      <div><label>Rate per night</label><input id="fRate" type="number" min="0"></div>
+    </div>
+    <label>Total</label><input id="fTotal" disabled>
+    <div class="grid2">
+      <div><label>Paid now</label><input id="fPaid" type="number" min="0" value="0"></div>
+      <div><label>Method</label><select id="fMethod">${methodOptions()}</select></div>
+    </div>
+    <div class="err" id="mErr"></div>`,
+    `<button class="btn" data-close>Cancel</button><button class="btn primary" id="mSave">Check in</button>`);
+  const upd = () => { $('#fTotal').value = money((+$('#fNights').value||0)*(+$('#fRate').value||0)); };
+  const setRate = () => { $('#fRate').value = roomById($('#fRoom').value)?.rate || 0; upd(); };
+  $('#fRoom').onchange = setRate; $('#fNights').oninput = upd; $('#fRate').oninput = upd; setRate();
+  $('#fName').focus();
+  $('#mSave').onclick = e => {
+    const name = $('#fName').value.trim(), nights = parseInt($('#fNights').value,10), rate = +$('#fRate').value, paid = +$('#fPaid').value || 0;
+    if (!name){ $('#mErr').textContent='Enter the guest name.'; return; }
+    if (!(nights>=1)){ $('#mErr').textContent='Nights must be 1 or more.'; return; }
+    run(e.target, ()=>api.checkIn({room_id:$('#fRoom').value, guest_name:name, guest_phone:$('#fPhone').value.trim(), nights, rate}, paid, $('#fMethod').value), 'Guest checked in');
+  };
+}
+
+function paymentModal(b){
+  const {bal} = balanceOf(b);
+  openModal('Add payment · ' + b.guest_name, `
+    <div class="grid2">
+      <div><label>Amount</label><input id="fAmt" type="number" min="1" value="${Math.max(0,bal)}"></div>
+      <div><label>Method</label><select id="fMethod">${methodOptions()}</select></div>
+    </div>
+    <p class="meta">Balance before this payment: ${money(bal)}</p>
+    <div class="err" id="mErr"></div>`,
+    `<button class="btn" data-close>Cancel</button><button class="btn primary" id="mSave">Save payment</button>`);
+  $('#mSave').onclick = e => {
+    const amt = +$('#fAmt').value;
+    if (!(amt>0)){ $('#mErr').textContent='Enter an amount above 0.'; return; }
+    run(e.target, ()=>api.addPayment(b.id, amt, $('#fMethod').value), 'Payment saved');
+  };
+}
+
+function checkOutModal(b){
+  const {bal} = balanceOf(b);
+  openModal('Check out · ' + b.guest_name,
+    (bal>0 ? `<p>This guest still owes <b class="neg">${money(bal)}</b>. Check out anyway?</p>`
+           : `<p>Fully paid. Check out ${esc(b.guest_name)}?</p>`) + '<div class="err" id="mErr"></div>',
+    `<button class="btn" data-close>Cancel</button><button class="btn danger" id="mSave">Check out</button>`);
+  $('#mSave').onclick = e => run(e.target, ()=>api.checkOut(b.id), 'Guest checked out');
+}
+
+function addRoomModal(){
+  const types = [...new Set(['Single','Double','Self Contained','Normal','Deluxe', ...data.rooms.map(r=>r.room_type).filter(Boolean)])];
+  openModal('Add room', `
+    <div class="grid2">
+      <div><label>Room number</label><input id="fNo" required></div>
+      <div><label>Type</label><input id="fType" list="typeList" value="${esc(types[0])}"><datalist id="typeList">${types.map(t=>`<option value="${esc(t)}">`).join('')}</datalist></div>
+    </div>
+    <label>Rate per night (${CURRENCY})</label><input id="fRate" type="number" min="0" value="50000">
+    <p class="meta">Rooms with the same type and rate are shown together. To link a bed sensor, register the device in Supabase SQL Editor.</p>
+    <div class="err" id="mErr"></div>`,
+    `<button class="btn" data-close>Cancel</button><button class="btn primary" id="mSave">Add room</button>`);
+  $('#mSave').onclick = e => {
+    const no = $('#fNo').value.trim(), type = $('#fType').value.trim() || 'Other';
+    if (!no){ $('#mErr').textContent='Enter a room number.'; return; }
+    run(e.target, ()=>api.addRoom(no, type, +$('#fRate').value||0), 'Room added');
+  };
+}
+
+/* =================== EVENTS =================== */
+document.addEventListener('click', e=>{
+  const br = e.target.closest('[data-branch]');
+  if (br){ $('#branchSel').value = br.dataset.branch; $('#branchSel').dispatchEvent(new Event('change')); show('overview'); return; }
+  const room = e.target.closest('[data-room]'); if (room){ roomModal(room.dataset.room); return; }
+  const f = e.target.closest('[data-filter]'); if (f){ filter = f.dataset.filter || null; render(); return; }
+  if (!READ_ONLY && e.target.closest('[data-action="checkin"]')){ checkInModal(); return; }
+  const r = e.target.closest('[data-resolve]');
+  if (r && !READ_ONLY){ r.disabled = true; const id = isNaN(r.dataset.resolve) ? r.dataset.resolve : +r.dataset.resolve;
+    api.resolveAlert(id).then(()=>{toast('Alert resolved'); refresh();}).catch(err=>{toast(friendly(err)); r.disabled=false;}); }
+});
+if (!READ_ONLY){
+  $('#checkInBtn').onclick = () => checkInModal();
+  $('#addRoomBtn').onclick = addRoomModal;
+}
+
+/* =================== STARTUP =================== */
+let refreshTimer = null;
+async function refresh(){
+  try {
+    data = await api.load(); render();
+    const errs = data.errors || [];
+    $('#loadErr').classList.toggle('hidden', !errs.length);
+    $('#loadErr').innerHTML = errs.length ? '<b>Some data could not be loaded:</b><br>' + errs.map(esc).join('<br>')
+      + '<br><span style="color:var(--ink)">Run <b>hotel_fix_permissions.sql</b> in Supabase SQL Editor, then reload this page.</span>' : '';
+    setLive(!errs.length);
+  }
+  catch(e){ console.error(e); setLive(false);
+    $('#loadErr').classList.remove('hidden');
+    $('#loadErr').innerHTML = '<b>Could not load data:</b> ' + esc(friendly(e)); }
+}
+function refreshSoon(){ clearTimeout(refreshTimer); refreshTimer = setTimeout(refresh, 600); }
+function setLive(ok, msg){
+  ['#liveDot','#liveDot2'].forEach(s=>$(s).classList.toggle('on', ok));
+  $('#liveTxt').textContent = ok ? (DEMO ? 'Demo data' : 'Live · updated ' + fmtClock(new Date())) : 'Offline';
+  if (!ok && msg) toast('Could not load data: ' + msg);
+}
+
+function showApp(email){
+  $('#loginView').classList.add('hidden');
+  $('#appView').classList.remove('hidden');
+  const name = OWNER_NAME || (email||'').split('@')[0];
+  $('#who').textContent = name || email || '';
+  $('#avatar').textContent = (name||'?').split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.title = HOTEL_NAME + ' · Owner';
+  $('#hotelTitle').textContent = HOTEL_NAME;
+  $('#hotelSub').textContent = HOTEL_SUB;
+  $('#whoRole').textContent = OWNER_ROLE;
+  if (READ_ONLY) document.querySelectorAll('#tools,[data-action="checkin"]').forEach(el=>el.remove());
+}
+
+async function start(){
+  $('#loginTitle').textContent = HOTEL_NAME;
+  if (DEMO){
+    $('#demoBanner').classList.remove('hidden');
+    $('#logoutTxt').textContent = 'Exit demo';
+    $('#logoutBtn').onclick = () => { location.href = location.pathname; };
+    showApp('demo@hotel');
+    await refresh();
+    setInterval(refresh, 60000);
+    return;
+  }
+  if (!window.supabase){ $('#loginView').classList.remove('hidden'); $('#loginErr').textContent='Could not load Supabase library. Check your internet connection.'; return; }
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  $('#loginForm').onsubmit = async e => {
+    e.preventDefault(); $('#loginErr').textContent='';
+    const {error} = await sb.auth.signInWithPassword({email:$('#email').value.trim(), password:$('#password').value});
+    if (error) $('#loginErr').textContent = error.message;
+  };
+  $('#logoutBtn').onclick = () => sb.auth.signOut();
+
+  let started = false;
+  sb.auth.onAuthStateChange((_ev, session)=>{
+    if (session && !started){
+      started = true; userId = session.user.id;
+      showApp(session.user.email);
+      refresh();
+      const channel = sb.channel('hotel-live');
+      ['bed_sensors','bookings','alerts','payments','sensor_events'].forEach(t=>
+        channel.on('postgres_changes', {event:'*', schema:'public', table:t}, refreshSoon));
+      channel.subscribe();
+      setInterval(refresh, 60000);
+    } else if (!session){
+      if (started){ location.reload(); return; }
+      $('#appView').classList.add('hidden');
+      $('#loginView').classList.remove('hidden');
+    }
+  });
+}
+start();
+</script>
+</body>
+</html>
