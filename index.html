@@ -87,6 +87,21 @@ nav{margin-top:14px;display:flex;flex-direction:column;gap:4px}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
 .legend span{display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:2px 4px;border-radius:6px}
 .legend span.active{background:var(--line);color:var(--ink)}
+.seg{display:inline-flex;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--muted);font-weight:500}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(29,23,48,.12)}
+.recon{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.recon .box{border:1px solid var(--line);border-radius:14px;padding:16px 18px;background:#fcfbfe}
+.recon .box .lbl{font-size:13px;font-weight:500}
+.recon .box .val{font-size:26px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums;line-height:1.2}
+.recon .box .sub{font-size:12px;color:var(--muted);margin-top:4px}
+.recon .box.short{background:var(--bad-bg);border-color:var(--bad-line)} .recon .box.short .val{color:var(--bad)}
+.recon .box.ok{background:var(--free-bg);border-color:var(--free-line)} .recon .box.ok .val{color:var(--free)}
+.recon-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;font-size:12.5px;color:var(--muted)}
+.linkbtn{background:none;border:0;color:var(--purple2);font-weight:600;cursor:pointer;padding:0}
+.sess{font-size:13px}
+.sess td{padding:7px 6px}
+@media (max-width:700px){ .recon{grid-template-columns:1fr} .recon .box .val{font-size:22px} }
 .legend i{width:12px;height:12px;border-radius:3px;border:1px solid}
 .tools{display:flex;gap:8px;width:100%;justify-content:flex-end;margin-top:-4px;margin-bottom:6px}
 
@@ -215,6 +230,11 @@ input:focus,select:focus{outline:2px solid var(--purple2);outline-offset:-1px}
       <!-- OVERVIEW -->
       <section data-section="overview">
         <div class="card">
+          <div class="card-h"><h2>Expected vs handed over</h2><div class="seg" data-seg></div></div>
+          <div class="recon" id="recon"></div>
+          <div class="recon-foot"><span id="reconNote"></span><button class="linkbtn" data-goto="reports">Per room details →</button></div>
+        </div>
+        <div class="card">
           <div class="card-h"><h2 id="roomsTitle">Rooms</h2><div class="legend" id="legend"></div></div>
           <div class="tools" id="tools"><button class="btn sm" id="addRoomBtn">+ Room</button><button class="btn sm primary" id="checkInBtn">Check in guest</button></div>
           <div id="roomGroups"></div>
@@ -245,6 +265,20 @@ input:focus,select:focus{outline:2px solid var(--purple2);outline-offset:-1px}
 
       <!-- REPORTS -->
       <section data-section="reports" class="hidden">
+        <div class="card">
+          <div class="card-h"><h2>Expected vs handed over by room</h2><div class="seg" data-seg></div></div>
+          <div class="tablewrap"><table>
+            <thead><tr><th>Room</th><th class="num">Time on bed</th><th class="num">Nights</th><th class="num">Expected</th><th class="num">Handed over</th><th class="num">Difference</th></tr></thead>
+            <tbody id="reconRows"></tbody>
+          </table></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h2>Bed occupancy log</h2><span class="meta" id="logNote"></span></div>
+          <div class="tablewrap" style="max-height:520px;overflow:auto"><table>
+            <thead><tr><th>Room</th><th>Sensor</th><th>Weight on</th><th>Weight off</th><th class="num">Duration</th><th class="num">Amount</th></tr></thead>
+            <tbody id="logRows"></tbody>
+          </table></div>
+        </div>
         <div class="card" id="branchCard">
           <div class="card-h"><h2>By branch</h2><span class="meta">today and this month</span></div>
           <div class="tablewrap"><table><thead><tr><th>Branch</th><th class="num">Rooms</th><th class="num">Checked in</th><th class="num">Today</th><th class="num">This month</th><th class="num">Unregistered use</th></tr></thead><tbody id="branchRows"></tbody></table></div>
@@ -294,6 +328,7 @@ const OWNER_NAME   = 'Muhizi';               // shown on the user card
 const OWNER_ROLE   = 'Director General';     // shown under the name
 const READ_ONLY    = true;                   // true = view reports only (no check-in, payments, rooms)
 const CURRENCY     = 'TZS';
+const CHECKOUT_HOUR = 12;   // a hotel night runs from 12:00 to 12:00 next day
 const PAY_METHODS  = ['Cash','M-Pesa','Mixx by Yas','Airtel Money','HaloPesa','Card','Bank'];
 /* ================================================ */
 
@@ -333,20 +368,21 @@ const live = {
   async load(){
     const ms = new Date(); ms.setDate(1); ms.setHours(0,0,0,0);
     const iso = ms.toISOString();
+    const win = new Date(ms.getTime() - 3*864e5).toISOString();   // 3 days before the 1st: covers nights that cross into the month
     const q = await Promise.all([
       sb.from('room_status').select('*').order('room_no'),
       sb.from('rooms').select('id,room_no,room_type,rate,branch_id').order('room_no'),
       sb.from('bookings').select('id,room_id,guest_name,guest_phone,check_in,nights,rate,amount_due,status,payments(amount)').eq('status','checked_in'),
-      sb.from('payments').select('id,amount,method,paid_at,booking_id,bookings(guest_name,room_id)').gte('paid_at', iso).order('paid_at',{ascending:false}),
+      sb.from('payments').select('id,amount,method,paid_at,booking_id,bookings(guest_name,room_id)').gte('paid_at', win).order('paid_at',{ascending:false}),
       sb.from('alerts').select('id,room_id,kind,message,resolved,created_at').or(`resolved.eq.false,created_at.gte."${iso}"`).order('created_at',{ascending:false}),
-      sb.from('sensor_events').select('id,device_id,occupied,event,created_at').order('created_at',{ascending:false}).limit(40),
+      sb.from('sensor_events').select('id,device_id,occupied,event,created_at').gte('created_at', win).order('created_at',{ascending:false}).limit(10000),
       sb.from('branches').select('id,name').order('name'),
     ]);
     // Show whatever loads; collect errors so the owner sees exactly what failed
     const names = ['room_status','rooms','bookings','payments','alerts','sensor_events','branches'];
     const errors = q.map((r,i)=>r.error ? names[i] + ': ' + r.error.message : null).filter(Boolean);
     return {status:q[0].data||[], rooms:q[1].data||[], bookings:q[2].data||[], payments:q[3].data||[],
-            alerts:q[4].data||[], events:q[5].data||[], branches:q[6].data||[], errors};
+            alerts:q[4].data||[], events:q[5].data||[], branches:q[6].data||[], errors, windowStart:win};
   },
   async checkIn(b, paid, method){
     const {data:bk, error} = await sb.from('bookings').insert({
@@ -417,12 +453,23 @@ const demo = (() => {
     {id:1,room_id:'r4',kind:'unregistered_occupancy',message:'Bed occupied but no guest is checked in to this room',resolved:false,created_at:new Date(now-40*M).toISOString()},
     {id:2,room_id:'r6',kind:'unregistered_occupancy',message:'Bed occupied but no guest is checked in to this room',resolved:true,created_at:new Date(now-3*24*H).toISOString()},
   ];
-  const events = [
-    {id:5,device_id:'GANAFA 5',occupied:true,event:'change',created_at:new Date(now-40*M).toISOString()},
-    {id:4,device_id:'GANAFA 3',occupied:true,event:'change',created_at:new Date(now-1.5*H).toISOString()},
-    {id:3,device_id:'GANAFA 4',occupied:false,event:'change',created_at:new Date(now-3*H).toISOString()},
-    {id:2,device_id:'GANAFA 1',occupied:true,event:'change',created_at:new Date(now-5*H).toISOString()},
-  ];
+  const events = [];
+  let eid = 1;
+  const dayStart = new Date(); dayStart.setHours(0,0,0,0);
+  Object.values(sensors).forEach((sn,k)=>{
+    if (!sn.dev) return;
+    for (let d=8; d>=1; d--){
+      if ((d*7 + k*3) % 4 === 0) continue;                          // some nights empty
+      const on  = dayStart.getTime() - d*864e5 + (20 + (k%3))*H;      // evening
+      const off = on + (9 + (d+k)%3)*H + 17*M;                        // next morning
+      if (off > now - 6*H) continue;
+      events.push({id:eid++,device_id:sn.dev,occupied:true, event:'change',created_at:new Date(on).toISOString()});
+      events.push({id:eid++,device_id:sn.dev,occupied:false,event:'change',created_at:new Date(off).toISOString()});
+    }
+    if (sn.occ) events.push({id:eid++,device_id:sn.dev,occupied:true,event:'change',created_at:new Date(sn.since).toISOString()});
+  });
+  events.sort((a,b)=>b.created_at.localeCompare(a.created_at));
+  for (let d=7; d>=1; d--) payments.push({id:100+d,booking_id:'b3',amount:d%3===0?30000:60000,method:d%2?'Cash':'M-Pesa',paid_at:new Date(dayStart.getTime()-d*864e5+15*H).toISOString()});
   let pid = 10, bid = 10;
   function status(){
     return rooms.map(r=>{
@@ -494,6 +541,84 @@ function scope(full, id){
   };
 }
 
+/* ---------- occupancy sessions & expected amount ---------- */
+// The sensor reports "weight on" (occupied) and "weight off" (empty). Each on→off pair is one session.
+// A night (12:00→12:00) in which a room's bed was occupied at any time counts once at the room's rate.
+const HOUR = 3600e3, DAY = 864e5;
+function bizKey(t){ const d = new Date(new Date(t).getTime() - CHECKOUT_HOUR*HOUR);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function bizStart(key){ const [y,m,d] = key.split('-').map(Number); return new Date(y, m-1, d, CHECKOUT_HOUR); }
+function keysBetween(a, b){ const out=[]; let k = bizKey(a); const end = bizKey(b);
+  for (let i=0; i<400; i++){ out.push(k); if (k===end) break; k = bizKey(bizStart(k).getTime() + DAY + HOUR); } return out; }
+function dur(ms){ const m = Math.max(0, Math.round(ms/60000)); const h = Math.floor(m/60), d = Math.floor(h/24);
+  return d ? `${d}d ${h%24}h` : h ? `${h}h ${String(m%60).padStart(2,'0')}m` : `${m}m`; }
+
+let period = 'today';
+function periodKeys(){
+  const t = bizKey(Date.now());
+  if (period==='today') return {label:'today', keys:new Set([t])};
+  if (period==='yesterday') return {label:'yesterday', keys:new Set([bizKey(Date.now()-DAY)])};
+  const ym = t.slice(0,7), keys = new Set();
+  for (let k = ym + '-01'; k <= t; k = bizKey(bizStart(k).getTime() + DAY + HOUR)) keys.add(k);
+  return {label:'this month', keys};
+}
+
+function buildSessions(d){
+  const devRoom = {}; d.status.forEach(s=>{ if (s.device_id) devRoom[s.device_id] = s; });
+  const byDev = {};
+  d.events.slice().sort((a,b)=>String(a.created_at).localeCompare(b.created_at))
+    .forEach(e=>{ (byDev[e.device_id] ||= []).push(e); });
+  const out = [];
+  const winStart = d.windowStart || new Date(Date.now()-35*DAY).toISOString();
+  Object.keys(devRoom).forEach(dev=>{
+    const st = devRoom[dev], list = byDev[dev] || [];
+    let cur = null, last = null;
+    list.forEach(e=>{
+      last = e.created_at;
+      if (e.occupied){ if (!cur) cur = e.created_at; }
+      else { out.push({device_id:dev, room_id:st.room_id, start:cur || winStart, end:e.created_at, unknownStart:!cur}); cur = null; }
+    });
+    if (cur) out.push({device_id:dev, room_id:st.room_id, start:cur, end:st.is_occupied ? null : (st.last_seen||cur), open:!!st.is_occupied});
+    else if (st.is_occupied && st.occupied_since && (!last || st.occupied_since > last))
+      out.push({device_id:dev, room_id:st.room_id, start:st.occupied_since, end:null, open:true});
+  });
+  // nights per room, attributed to the first session that touched each night
+  out.sort((a,b)=>String(a.start).localeCompare(b.start));
+  const seen = {};
+  out.forEach(s=>{
+    const set = seen[s.room_id] ||= new Set();
+    s.keys = keysBetween(s.start, s.end || Date.now());
+    s.newKeys = s.keys.filter(k=>!set.has(k)); s.newKeys.forEach(k=>set.add(k));
+    s.ms = new Date(s.end || Date.now()) - new Date(s.start);
+  });
+  return out;
+}
+
+function reconcile(d){
+  const {keys, label} = periodKeys();
+  const sessions = buildSessions(d);
+  const minKey = [...keys].sort()[0], maxKey = [...keys].sort().pop();
+  const pFrom = bizStart(minKey), pTo = new Date(bizStart(maxKey).getTime() + DAY);
+  const rows = {};
+  d.rooms.forEach(r=>{ rows[r.id] = {room:r, ms:0, nights:0, expected:0, handed:0, sessions:[]}; });
+  sessions.forEach(s=>{
+    const row = rows[s.room_id]; if (!row) return;
+    const a = Math.max(new Date(s.start), pFrom), b = Math.min(new Date(s.end || Date.now()), pTo);
+    if (b > a){ row.ms += b - a; row.sessions.push(s); }
+    const n = s.newKeys.filter(k=>keys.has(k)).length;
+    row.nights += n; row.expected += n * Number(row.room.rate||0);
+  });
+  d.payments.forEach(p=>{
+    const row = rows[p.bookings?.room_id];
+    if (row && keys.has(bizKey(p.paid_at))) row.handed += Number(p.amount);
+  });
+  const list = Object.values(rows);
+  const tot = list.reduce((t,r)=>({expected:t.expected+r.expected, handed:t.handed+r.handed, nights:t.nights+r.nights, sessions:t.sessions+r.sessions.length}),
+                          {expected:0, handed:0, nights:0, sessions:0});
+  const inPeriod = sessions.filter(s=>new Date(s.end || Date.now()) > pFrom && new Date(s.start) < pTo);
+  return {label, list, tot, sessions:inPeriod, keys};
+}
+
 function renderBranchPicker(){
   const sel = $('#branchSel');
   const list = data.branches || [];
@@ -516,7 +641,7 @@ function renderBranchTable(full){
   const rows = (full.branches||[]).map(b=>{
     const d = scope(full, b.id);
     const today = d.payments.filter(p=>new Date(p.paid_at)>=today0).reduce((s,p)=>s+Number(p.amount),0);
-    const month = d.payments.reduce((s,p)=>s+Number(p.amount),0);
+    const month = d.payments.filter(p=>new Date(p.paid_at)>=month0).reduce((s,p)=>s+Number(p.amount),0);
     const leak = d.alerts.filter(a=>a.kind==='unregistered_occupancy' && new Date(a.created_at)>=month0).length;
     return `<tr class="click" data-branch="${b.id}"><td><b>${esc(b.name)}</b></td><td class="num">${d.rooms.length}</td><td class="num">${d.bookings.length}</td>
       <td class="num">${num(today)}</td><td class="num">${num(month)}</td><td class="num ${leak?'neg':''}">${leak}</td></tr>`;
@@ -552,6 +677,37 @@ function renderView(){
     <div class="kpi red"><div class="lbl">Rooms checked in</div><div class="val">${checkedIn}</div><div class="sub">of ${roomsTotal} · ${st.filter(s=>s.is_occupied).length} beds in use</div></div>
     <div class="kpi hi"><div class="lbl">Room sales today</div><div class="val">${money(today)}</div><div class="sub">${todayPays.length} payment(s)</div></div>
     <div class="kpi"><div class="lbl">Possible unrecorded</div><div class="val" style="color:${leakAmt?'var(--bad)':'inherit'}">${money(leakAmt)}</div><div class="sub">${leak.length} unregistered use · ${fmtDate(new Date())}</div></div>`;
+
+  // ----- expected vs handed over -----
+  document.querySelectorAll('[data-seg]').forEach(el=>{
+    el.innerHTML = [['today','Today'],['yesterday','Yesterday'],['month','This month']]
+      .map(([k,t])=>`<button data-period="${k}" class="${period===k?'on':''}">${t}</button>`).join('');
+  });
+  const rc = reconcile(data);
+  const diff = rc.tot.expected - rc.tot.handed;
+  $('#recon').innerHTML = `
+    <div class="box"><div class="lbl">Amount expected</div><div class="val">${money(rc.tot.expected)}</div>
+      <div class="sub">${rc.tot.nights} room-night(s) detected by bed sensors</div></div>
+    <div class="box"><div class="lbl">Amount handed over</div><div class="val">${money(rc.tot.handed)}</div>
+      <div class="sub">payments recorded ${rc.label}</div></div>
+    <div class="box ${diff>0?'short':'ok'}"><div class="lbl">Difference</div><div class="val">${diff>0?'−':''}${money(Math.abs(diff))}</div>
+      <div class="sub">${diff>0?'short: less money than bed use':diff<0?'more money than bed use (advance payments)':'balanced'}</div></div>`;
+  $('#reconNote').textContent = `${rc.tot.sessions} bed session(s) ${rc.label} · a night runs ${String(CHECKOUT_HOUR).padStart(2,'0')}:00 → ${String(CHECKOUT_HOUR).padStart(2,'0')}:00`;
+
+  const rrows = rc.list.filter(r=>r.ms || r.handed || r.expected).sort((a,b)=>(b.expected-b.handed)-(a.expected-a.handed) || byRoomNo(a.room.room_no,b.room.room_no));
+  $('#reconRows').innerHTML = rrows.length ? rrows.map(r=>{ const df = r.expected - r.handed;
+    return `<tr class="click" data-room="${r.room.id}"><td><b>${roomLabel(r.room.id)}</b></td><td class="num">${r.ms?dur(r.ms):'—'}</td><td class="num">${r.nights}</td>
+      <td class="num">${num(r.expected)}</td><td class="num">${num(r.handed)}</td><td class="num ${df>0?'neg':''}">${df>0?'−':''}${num(Math.abs(df))}</td></tr>`; }).join('')
+    + `<tr><td><b>Total</b></td><td></td><td class="num"><b>${rc.tot.nights}</b></td><td class="num"><b>${num(rc.tot.expected)}</b></td><td class="num"><b>${num(rc.tot.handed)}</b></td><td class="num ${diff>0?'neg':''}"><b>${diff>0?'−':''}${num(Math.abs(diff))}</b></td></tr>`
+    : `<tr><td colspan="6" class="empty">No bed use or payments ${rc.label}.</td></tr>`;
+
+  const log = rc.sessions.slice().sort((a,b)=>String(b.start).localeCompare(a.start)).slice(0,300);
+  $('#logNote').textContent = rc.sessions.length + ' session(s) ' + rc.label;
+  $('#logRows').innerHTML = log.length ? log.map(s=>{ const r = roomById(s.room_id); const amt = s.newKeys.filter(k=>rc.keys.has(k)).length * Number(r?.rate||0);
+    return `<tr class="click" data-room="${s.room_id}"><td><b>${roomLabel(s.room_id)}</b></td><td>${esc(s.device_id)}</td>
+      <td>${s.unknownStart?'before '+fmtTime(s.start):fmtTime(s.start)}</td><td>${s.end?fmtTime(s.end):'<span class="tag bad">still on bed</span>'}</td>
+      <td class="num">${dur(s.ms)}</td><td class="num">${amt?num(amt):'<span class="meta">same night</span>'}</td></tr>`; }).join('')
+    : `<tr><td colspan="6" class="empty">No bed sessions ${rc.label}.</td></tr>`;
 
   // ----- sidebar badge -----
   $('#navBadge').textContent = openAlerts.length;
@@ -604,9 +760,10 @@ function renderView(){
     : '<tr><td colspan="7" class="empty">No guests checked in.</td></tr>';
 
   // ----- payments -----
-  const month = data.payments.reduce((s,p)=>s+Number(p.amount),0);
-  $('#payTotal').textContent = data.payments.length + ' payments · ' + money(month);
-  $('#payRows').innerHTML = data.payments.length ? data.payments.map(p=>`<tr>
+  const monthPays = data.payments.filter(p=>new Date(p.paid_at)>=month0);
+  const month = monthPays.reduce((s,p)=>s+Number(p.amount),0);
+  $('#payTotal').textContent = monthPays.length + ' payments · ' + money(month);
+  $('#payRows').innerHTML = monthPays.length ? monthPays.map(p=>`<tr>
       <td>${fmtTime(p.paid_at)}</td><td>${roomLabel(p.bookings?.room_id)}</td>
       <td>${esc(p.bookings?.guest_name||'')}</td><td>${esc(p.method)}</td><td class="num">${num(p.amount)}</td></tr>`).join('')
     : '<tr><td colspan="5" class="empty">No payments this month.</td></tr>';
@@ -623,11 +780,11 @@ function renderView(){
     <dt>Beds in use now (sensors)</dt><dd>${st.filter(s=>s.is_occupied).length} of ${beds}</dd>
     <dt>Sensors offline</dt><dd>${st.filter(s=>s.status==='sensor_offline').length}</dd>`;
   const byMethod = {};
-  data.payments.forEach(p=>{ const m=byMethod[p.method] ||= {n:0,a:0}; m.n++; m.a+=Number(p.amount); });
+  monthPays.forEach(p=>{ const m=byMethod[p.method] ||= {n:0,a:0}; m.n++; m.a+=Number(p.amount); });
   $('#methodRows').innerHTML = Object.keys(byMethod).length ? Object.entries(byMethod).sort((a,b)=>b[1].a-a[1].a)
     .map(([m,v])=>`<tr><td>${esc(m)}</td><td class="num">${v.n}</td><td class="num">${num(v.a)}</td></tr>`).join('')
     : '<tr><td colspan="3" class="empty">No payments this month.</td></tr>';
-  $('#events').innerHTML = data.events.length ? data.events.map(e=>`<li><div class="row">
+  $('#events').innerHTML = data.events.length ? data.events.slice(0,30).map(e=>`<li><div class="row">
       <span>Room ${roomIdByDevice(e.device_id) ? roomLabel(roomIdByDevice(e.device_id)) : esc(e.device_id)}</span>
       <span class="tag ${e.occupied?'bad':'ok'}">${e.occupied?'Bed occupied':'Bed empty'}</span></div>
       <div class="meta">${fmtTime(e.created_at)}</div></li>`).join('')
@@ -701,7 +858,21 @@ function roomModal(roomId){
     foot = `<button class="btn" data-close>Close</button><button class="btn primary" id="mIn">Check in guest</button>`;
   }
   if (READ_ONLY) foot = `<button class="btn" data-close>Close</button>`;
-  openModal('Room ' + (r?.room_no||''), html + '</dl>', foot);
+  // occupancy history for this room (this month)
+  const prev = period; period = 'month';
+  const rc = reconcile(data); period = prev;
+  const row = rc.list.find(x=>x.room.id===roomId);
+  const ss = rc.sessions.filter(x=>x.room_id===roomId).sort((a,b)=>String(b.start).localeCompare(a.start));
+  html += `</dl><h4 style="margin:18px 0 6px;font-family:var(--serif);font-size:15px">Bed occupancy this month</h4>
+    <dl class="kv"><dt>Time on bed</dt><dd>${row?.ms?dur(row.ms):'—'}</dd>
+    <dt>Nights detected</dt><dd>${row?.nights||0}</dd>
+    <dt>Expected</dt><dd>${money(row?.expected)}</dd>
+    <dt>Handed over</dt><dd>${money(row?.handed)}</dd>
+    <dt>Difference</dt><dd><b class="${(row?.expected||0)>(row?.handed||0)?'neg':''}">${(row?.expected||0)>(row?.handed||0)?'−':''}${money(Math.abs((row?.expected||0)-(row?.handed||0)))}</b></dd></dl>`
+    + (ss.length ? `<div class="tablewrap" style="margin-top:8px;max-height:220px;overflow:auto"><table class="sess"><thead><tr><th>On</th><th>Off</th><th class="num">Time</th></tr></thead><tbody>`
+      + ss.slice(0,40).map(x=>`<tr><td>${fmtTime(x.start)}</td><td>${x.end?fmtTime(x.end):'still on bed'}</td><td class="num">${dur(x.ms)}</td></tr>`).join('')
+      + '</tbody></table></div>' : '<p class="meta">No bed sessions recorded this month.</p>');
+  openModal('Room ' + (r?.room_no||''), html, foot);
   $('#mIn')?.addEventListener('click', ()=>checkInModal(roomId));
   $('#mPay')?.addEventListener('click', ()=>paymentModal(b));
   $('#mOut')?.addEventListener('click', ()=>checkOutModal(b));
@@ -784,6 +955,8 @@ function addRoomModal(){
 
 /* =================== EVENTS =================== */
 document.addEventListener('click', e=>{
+  const pb = e.target.closest('[data-period]'); if (pb){ period = pb.dataset.period; render(); return; }
+  const go = e.target.closest('[data-goto]'); if (go){ show(go.dataset.goto); return; }
   const br = e.target.closest('[data-branch]');
   if (br){ $('#branchSel').value = br.dataset.branch; $('#branchSel').dispatchEvent(new Event('change')); show('overview'); return; }
   const room = e.target.closest('[data-room]'); if (room){ roomModal(room.dataset.room); return; }
