@@ -129,6 +129,8 @@ nav{margin-top:14px;display:flex;flex-direction:column;gap:4px}
 .t-occupied{background:var(--occ-bg);border-color:var(--occ-line)} .t-occupied .st{color:var(--occ)}
 .t-booked_guest_out{background:var(--out-bg);border-color:var(--out-line)} .t-booked_guest_out .st{color:var(--out)}
 .t-unregistered{background:var(--bad-bg);border-color:var(--bad)} .t-unregistered .st{color:var(--bad)}
+.t-detecting{background:#fff6e0;border-color:#f0c96a;animation:blink 1.6s ease-in-out infinite} .t-detecting .st{color:#b7791f}
+@keyframes blink{50%{box-shadow:0 0 0 4px rgba(240,201,106,.35)}}
 .t-sensor_offline,.t-no_sensor{background:var(--off-bg);border-color:var(--off-line)} .t-sensor_offline .st,.t-no_sensor .st{color:var(--off)}
 
 /* tables & lists */
@@ -482,7 +484,8 @@ const demo = (() => {
       else if (bk) st='booked_guest_out';
       else if (s.occ) st='unregistered';
       else st='available';
-      return {room_id:r.id, room_no:r.room_no, branch_id:r.branch_id, bed_id:r.id+'a', bed:'A', device_id:s.dev,
+      const pend = (r.id==='r7') ? {pending_kind:'pending_on', pending_since:new Date(now-4*M).toISOString()} : {pending_kind:null, pending_since:null};
+      return {...pend, room_id:r.id, room_no:r.room_no, branch_id:r.branch_id, bed_id:r.id+'a', bed:'A', device_id:s.dev,
         is_occupied:!!s.occ, occupied_since:s.since?new Date(s.since).toISOString():null,
         last_seen:s.seen?new Date(s.seen).toISOString():null,
         booking_id:bk?.id||null, guest_name:bk?.guest_name||null, status:st};
@@ -731,13 +734,19 @@ function renderView(){
       const list = beds.length ? beds : [{room_id:r.id, room_no:r.room_no, status:'no_sensor'}];
       return list.filter(s=>!filter || s.status===filter).map(s=>{
         const meta = STATUS[s.status] || {label:s.status};
-        let x = num(r.rate);
+        let x = num(r.rate), cls = s.status, label = meta.label;
         if (s.guest_name) x = esc(s.guest_name);
         else if (s.status==='unregistered') x = 'On bed ' + ago(s.occupied_since);
         else if (s.status==='sensor_offline') x = 'Seen ' + ago(s.last_seen) + ' ago';
-        return `<div class="tile t-${s.status}" data-room="${r.id}" title="${meta.label}">
+        // live report from the device: weight came on / went off, still confirming
+        if (s.status!=='sensor_offline' && s.pending_kind==='pending_on' && !s.is_occupied){
+          cls = 'detecting'; label = 'Weight detected'; x = 'confirming · ' + ago(s.pending_since);
+        } else if (s.status!=='sensor_offline' && s.pending_kind==='pending_off' && s.is_occupied){
+          x = 'Left bed ' + ago(s.pending_since) + ' ago?';
+        }
+        return `<div class="tile t-${cls}" data-room="${r.id}" title="${label}">
           <div class="no">${esc(r.room_no)}${beds.length>1?'<small style="font-size:13px"> '+esc(s.bed)+'</small>':''}</div>
-          <div class="st">${meta.label}</div><div class="x">${x}</div></div>`;
+          <div class="st">${label}</div><div class="x">${x}</div></div>`;
       });
     });
     if (!tiles.length) return '';
@@ -842,7 +851,8 @@ function roomModal(roomId){
     <dt>Type / rate</dt><dd>${esc(r?.room_type||'—')} · ${money(r?.rate)}/night</dd>
     <dt>Sensor</dt><dd>${esc(s?.device_id||'none')}</dd>
     <dt>Last report</dt><dd>${s?.last_seen? ago(s.last_seen)+' ago':'—'}</dd>
-    <dt>Bed</dt><dd>${s?.is_occupied? 'in use for '+ago(s.occupied_since):'empty'}</dd>`;
+    <dt>Bed</dt><dd>${s?.is_occupied? 'in use for '+ago(s.occupied_since):'empty'}</dd>
+    ${s?.pending_kind ? `<dt>Live</dt><dd><b style="color:#b7791f">${s.pending_kind==='pending_on'?'weight detected':'weight gone'} ${ago(s.pending_since)} ago · confirming</b></dd>` : ''}`;
   let foot;
   if (b){
     const {paid,bal} = balanceOf(b);
