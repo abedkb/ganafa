@@ -69,7 +69,7 @@ nav{margin-top:14px;display:flex;flex-direction:column;gap:4px}
 .demo-banner{background:#facc15;color:#422006;text-align:center;font-size:13px;padding:6px 12px;border-radius:10px;margin-bottom:14px}
 
 /* ===== KPI cards ===== */
-.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
 .kpi .lbl{font-size:13px;color:var(--ink);font-weight:500;opacity:.85}
 .kpi .val{font-size:26px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums;line-height:1.2}
@@ -168,7 +168,8 @@ input:focus,select:focus{outline:2px solid var(--purple2);outline-offset:-1px}
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--side);color:#fff;padding:11px 18px;border-radius:12px;font-size:14px;z-index:60;max-width:calc(100vw - 32px)}
 
 /* ===== responsive ===== */
-@media (max-width:1100px){ .kpis{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:1100px){ .kpis{grid-template-columns:repeat(3,minmax(0,1fr))} }
+@media (max-width:640px){ .kpis{grid-template-columns:1fr} }
 @media (max-width:860px){
   .sidebar{position:fixed;left:0;top:0;transform:translateX(-100%);transition:transform .2s;box-shadow:0 0 40px rgba(0,0,0,.3)}
   .sidebar.open{transform:none}
@@ -213,8 +214,6 @@ input:focus,select:focus{outline:2px solid var(--purple2);outline-offset:-1px}
     <div class="livebox"><span class="dot" id="liveDot"></span><span id="liveTxt">Connecting…</span></div>
     <nav id="nav">
       <button class="nav active" data-view="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Overview</button>
-      <button class="nav" data-view="guests"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10V20M21 14V20M3 14h18M3 14v-2a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><circle cx="7" cy="7" r="2"/></svg>Guests</button>
-      <button class="nav" data-view="payments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h13l-3-3M20 17H7l3 3"/></svg>Payments</button>
       <button class="nav" data-view="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Reports</button>
       <button class="nav" data-view="alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4"/></svg>Alerts<span class="badge hidden" id="navBadge">0</span></button>
     </nav>
@@ -232,45 +231,22 @@ input:focus,select:focus{outline:2px solid var(--purple2);outline-offset:-1px}
       <!-- OVERVIEW -->
       <section data-section="overview">
         <div class="card">
-          <div class="card-h"><h2>Expected vs handed over</h2><div class="seg" data-seg></div></div>
+          <div class="card-h"><h2>Room sales from bed sensors</h2><div class="seg" data-seg></div></div>
           <div class="recon" id="recon"></div>
           <div class="recon-foot"><span id="reconNote"></span><button class="linkbtn" data-goto="reports">Per room details →</button></div>
         </div>
         <div class="card">
           <div class="card-h"><h2 id="roomsTitle">Rooms</h2><div class="legend" id="legend"></div></div>
-          <div class="tools" id="tools"><button class="btn sm" id="addRoomBtn">+ Room</button><button class="btn sm primary" id="checkInBtn">Check in guest</button></div>
           <div id="roomGroups"></div>
-        </div>
-      </section>
-
-      <!-- GUESTS -->
-      <section data-section="guests" class="hidden">
-        <div class="card">
-          <div class="card-h"><h2>Guests in house</h2><button class="btn sm primary" data-action="checkin">Check in guest</button></div>
-          <div class="tablewrap"><table>
-            <thead><tr><th>Room</th><th>Guest</th><th>Phone</th><th>Since</th><th class="num">Due</th><th class="num">Paid</th><th class="num">Balance</th></tr></thead>
-            <tbody id="guestRows"></tbody>
-          </table></div>
-        </div>
-      </section>
-
-      <!-- PAYMENTS -->
-      <section data-section="payments" class="hidden">
-        <div class="card">
-          <div class="card-h"><h2>Payments this month</h2><span class="meta" id="payTotal"></span></div>
-          <div class="tablewrap"><table>
-            <thead><tr><th>Date</th><th>Room</th><th>Guest</th><th>Method</th><th class="num">Amount</th></tr></thead>
-            <tbody id="payRows"></tbody>
-          </table></div>
         </div>
       </section>
 
       <!-- REPORTS -->
       <section data-section="reports" class="hidden">
         <div class="card">
-          <div class="card-h"><h2>Expected vs handed over by room</h2><div class="seg" data-seg></div></div>
+          <div class="card-h"><h2>Room sales by room</h2><div class="seg" data-seg></div></div>
           <div class="tablewrap"><table>
-            <thead><tr><th>Room</th><th class="num">Time on bed</th><th class="num">Nights</th><th class="num">Expected</th><th class="num">Handed over</th><th class="num">Difference</th></tr></thead>
+            <thead><tr><th>Room</th><th class="num">Time on bed</th><th class="num">Nights</th><th class="num">Sales</th></tr></thead>
             <tbody id="reconRows"></tbody>
           </table></div>
         </div>
@@ -282,16 +258,12 @@ input:focus,select:focus{outline:2px solid var(--purple2);outline-offset:-1px}
           </table></div>
         </div>
         <div class="card" id="branchCard">
-          <div class="card-h"><h2>By branch</h2><span class="meta">today and this month</span></div>
-          <div class="tablewrap"><table><thead><tr><th>Branch</th><th class="num">Rooms</th><th class="num">Checked in</th><th class="num">Today</th><th class="num">This month</th><th class="num">Unregistered use</th></tr></thead><tbody id="branchRows"></tbody></table></div>
+          <div class="card-h"><h2>By branch</h2><span class="meta">from bed sensors</span></div>
+          <div class="tablewrap"><table><thead><tr><th>Branch</th><th class="num">Rooms</th><th class="num">Occupied now</th><th class="num">Sales today</th><th class="num">Sales this month</th></tr></thead><tbody id="branchRows"></tbody></table></div>
         </div>
         <div class="card">
           <div class="card-h"><h2>This month</h2></div>
           <dl class="kv" id="reportKv" style="max-width:520px"></dl>
-        </div>
-        <div class="card">
-          <div class="card-h"><h2>Collections by method</h2></div>
-          <div class="tablewrap"><table><thead><tr><th>Method</th><th class="num">Payments</th><th class="num">Amount</th></tr></thead><tbody id="methodRows"></tbody></table></div>
         </div>
         <div class="card">
           <div class="card-h"><h2>Bed activity</h2></div>
@@ -302,12 +274,8 @@ input:focus,select:focus{outline:2px solid var(--purple2);outline-offset:-1px}
       <!-- ALERTS -->
       <section data-section="alerts" class="hidden">
         <div class="card">
-          <div class="card-h"><h2>Open alerts</h2></div>
+          <div class="card-h"><h2>Sensors needing attention</h2></div>
           <ul class="list" id="alertsOpen"></ul>
-        </div>
-        <div class="card">
-          <div class="card-h"><h2>Resolved this month</h2></div>
-          <ul class="list" id="alertsDone"></ul>
         </div>
       </section>
     </main>
@@ -359,6 +327,7 @@ const STATUS = {
   unregistered:     {label:'Not registered', color:'var(--bad)',  bg:'var(--bad-bg)',  line:'var(--bad)'},
   sensor_offline:   {label:'Offline',        color:'var(--off)',  bg:'var(--off-bg)',  line:'var(--off-line)'},
   no_sensor:        {label:'No sensor',      color:'var(--off)',  bg:'var(--off-bg)',  line:'var(--off-line)'},
+  detecting:        {label:'Weight detected',color:'#b7791f',     bg:'#fff6e0',        line:'#f0c96a'},
 };
 
 let data = {status:[], rooms:[], bookings:[], payments:[], alerts:[], events:[], branches:[]};
@@ -597,29 +566,42 @@ function buildSessions(d){
   return out;
 }
 
-function reconcile(d){
-  const {keys, label} = periodKeys();
+function reconcile(d, per){
+  const saved = period; if (per) period = per;
+  const {keys, label} = periodKeys(); period = saved;
   const sessions = buildSessions(d);
-  const minKey = [...keys].sort()[0], maxKey = [...keys].sort().pop();
-  const pFrom = bizStart(minKey), pTo = new Date(bizStart(maxKey).getTime() + DAY);
+  const sorted = [...keys].sort();
+  const pFrom = bizStart(sorted[0]), pTo = new Date(bizStart(sorted[sorted.length-1]).getTime() + DAY);
   const rows = {};
-  d.rooms.forEach(r=>{ rows[r.id] = {room:r, ms:0, nights:0, expected:0, handed:0, sessions:[]}; });
+  d.rooms.forEach(r=>{ rows[r.id] = {room:r, ms:0, nights:0, sales:0, sessions:[]}; });
   sessions.forEach(s=>{
     const row = rows[s.room_id]; if (!row) return;
     const a = Math.max(new Date(s.start), pFrom), b = Math.min(new Date(s.end || Date.now()), pTo);
     if (b > a){ row.ms += b - a; row.sessions.push(s); }
     const n = s.newKeys.filter(k=>keys.has(k)).length;
-    row.nights += n; row.expected += n * Number(row.room.rate||0);
-  });
-  d.payments.forEach(p=>{
-    const row = rows[p.bookings?.room_id];
-    if (row && keys.has(bizKey(p.paid_at))) row.handed += Number(p.amount);
+    row.nights += n; row.sales += n * Number(row.room.rate||0);
   });
   const list = Object.values(rows);
-  const tot = list.reduce((t,r)=>({expected:t.expected+r.expected, handed:t.handed+r.handed, nights:t.nights+r.nights, sessions:t.sessions+r.sessions.length}),
-                          {expected:0, handed:0, nights:0, sessions:0});
+  const tot = list.reduce((t,r)=>({sales:t.sales+r.sales, nights:t.nights+r.nights, ms:t.ms+r.ms, sessions:t.sessions+r.sessions.length}),
+                          {sales:0, nights:0, ms:0, sessions:0});
   const inPeriod = sessions.filter(s=>new Date(s.end || Date.now()) > pFrom && new Date(s.start) < pTo);
   return {label, list, tot, sessions:inPeriod, keys};
+}
+
+// what a bed shows on screen: "Weight detected" while the device is still confirming
+function dispStatus(s){
+  if (s.status!=='sensor_offline' && s.status!=='no_sensor' && !s.is_occupied && s.pending_kind==='pending_on') return 'detecting';
+  return s.status;
+}
+// which rooms are occupied / being detected right now (from the sensors only)
+function roomState(d){
+  const occ = new Set(), det = new Set();
+  d.status.forEach(s=>{
+    if (s.is_occupied) occ.add(s.room_id);
+    else if (s.pending_kind==='pending_on' && s.status!=='sensor_offline') det.add(s.room_id);
+  });
+  det.forEach(id=>{ if (occ.has(id)) det.delete(id); });
+  return {occ, det};
 }
 
 function renderBranchPicker(){
@@ -640,16 +622,14 @@ $('#branchSel').onchange = e => {
 };
 
 function renderBranchTable(full){
-  const today0 = startOfToday(), month0 = startOfMonth();
   const rows = (full.branches||[]).map(b=>{
     const d = scope(full, b.id);
-    const today = d.payments.filter(p=>new Date(p.paid_at)>=today0).reduce((s,p)=>s+Number(p.amount),0);
-    const month = d.payments.filter(p=>new Date(p.paid_at)>=month0).reduce((s,p)=>s+Number(p.amount),0);
-    const leak = d.alerts.filter(a=>a.kind==='unregistered_occupancy' && new Date(a.created_at)>=month0).length;
-    return `<tr class="click" data-branch="${b.id}"><td><b>${esc(b.name)}</b></td><td class="num">${d.rooms.length}</td><td class="num">${d.bookings.length}</td>
-      <td class="num">${num(today)}</td><td class="num">${num(month)}</td><td class="num ${leak?'neg':''}">${leak}</td></tr>`;
+    const {occ} = roomState(d);
+    const today = reconcile(d, 'today').tot.sales, month = reconcile(d, 'month').tot.sales;
+    return `<tr class="click" data-branch="${b.id}"><td><b>${esc(b.name)}</b></td><td class="num">${d.rooms.length}</td><td class="num">${occ.size}</td>
+      <td class="num">${num(today)}</td><td class="num">${num(month)}</td></tr>`;
   });
-  $('#branchRows').innerHTML = rows.join('') || '<tr><td colspan="6" class="empty">No branches yet.</td></tr>';
+  $('#branchRows').innerHTML = rows.join('') || '<tr><td colspan="5" class="empty">No branches yet.</td></tr>';
 }
 
 function render(){
@@ -665,44 +645,38 @@ const startOfMonth = () => { const d=new Date(); d.setDate(1); d.setHours(0,0,0,
 
 function renderView(){
   const st = data.status;
-  const today0 = startOfToday(), month0 = startOfMonth();
-  const todayPays = data.payments.filter(p=>new Date(p.paid_at)>=today0);
-  const today = todayPays.reduce((s,p)=>s+Number(p.amount),0);
   const roomsTotal = data.rooms.length;
-  const checkedIn = data.bookings.length;
-  const leak = data.alerts.filter(a=>a.kind==='unregistered_occupancy' && new Date(a.created_at)>=month0);
-  const leakAmt = leak.reduce((s,a)=>s+Number(roomById(a.room_id)?.rate||0),0);
-  const openAlerts = data.alerts.filter(a=>!a.resolved);
+  const {occ, det} = roomState(data);
+  const available = data.rooms.filter(r=>{ const b = st.filter(x=>x.room_id===r.id); return b.length && b.every(x=>dispStatus(x)==='available'); }).length;
+  const todaySales = reconcile(data, 'today');
+  const offline = st.filter(s=>s.status==='sensor_offline' || s.status==='no_sensor');
 
-  // ----- KPI cards -----
+  // ----- KPI cards (sensor data only) -----
   $('#kpis').innerHTML = `
-    <div class="kpi green"><div class="lbl">Rooms available</div><div class="val">${roomsTotal-checkedIn}</div><div class="sub">of ${roomsTotal}</div></div>
-    <div class="kpi red"><div class="lbl">Rooms checked in</div><div class="val">${checkedIn}</div><div class="sub">of ${roomsTotal} · ${st.filter(s=>s.is_occupied).length} beds in use</div></div>
-    <div class="kpi hi"><div class="lbl">Room sales today</div><div class="val">${money(today)}</div><div class="sub">${todayPays.length} payment(s)</div></div>
-    <div class="kpi"><div class="lbl">Possible unrecorded</div><div class="val" style="color:${leakAmt?'var(--bad)':'inherit'}">${money(leakAmt)}</div><div class="sub">${leak.length} unregistered use · ${fmtDate(new Date())}</div></div>`;
+    <div class="kpi green"><div class="lbl">Rooms available</div><div class="val">${available}</div><div class="sub">of ${roomsTotal} · sensor working, no weight on the bed</div></div>
+    <div class="kpi red"><div class="lbl">Rooms occupied</div><div class="val">${occ.size}</div><div class="sub">of ${roomsTotal}${det.size ? ' · +' + det.size + ' weight detected, confirming' : ' · weight detected by sensors'}</div></div>
+    <div class="kpi hi"><div class="lbl">Room sales today</div><div class="val">${money(todaySales.tot.sales)}</div><div class="sub">${todaySales.tot.nights} room-night(s) from bed sensors</div></div>`;
 
-  // ----- expected vs handed over -----
+  // ----- room sales card -----
   document.querySelectorAll('[data-seg]').forEach(el=>{
     el.innerHTML = [['today','Today'],['yesterday','Yesterday'],['month','This month']]
       .map(([k,t])=>`<button data-period="${k}" class="${period===k?'on':''}">${t}</button>`).join('');
   });
   const rc = reconcile(data);
-  const diff = rc.tot.expected - rc.tot.handed;
   $('#recon').innerHTML = `
-    <div class="box"><div class="lbl">Amount expected</div><div class="val">${money(rc.tot.expected)}</div>
-      <div class="sub">${rc.tot.nights} room-night(s) detected by bed sensors</div></div>
-    <div class="box"><div class="lbl">Amount handed over</div><div class="val">${money(rc.tot.handed)}</div>
-      <div class="sub">payments recorded ${rc.label}</div></div>
-    <div class="box ${diff>0?'short':'ok'}"><div class="lbl">Difference</div><div class="val">${diff>0?'−':''}${money(Math.abs(diff))}</div>
-      <div class="sub">${diff>0?'short: less money than bed use':diff<0?'more money than bed use (advance payments)':'balanced'}</div></div>`;
-  $('#reconNote').textContent = `${rc.tot.sessions} bed session(s) ${rc.label} · a night runs ${String(CHECKOUT_HOUR).padStart(2,'0')}:00 → ${String(CHECKOUT_HOUR).padStart(2,'0')}:00`;
+    <div class="box ok"><div class="lbl">Room sales</div><div class="val">${money(rc.tot.sales)}</div>
+      <div class="sub">room-nights × room rate, ${rc.label}</div></div>
+    <div class="box"><div class="lbl">Room-nights occupied</div><div class="val">${rc.tot.nights}</div>
+      <div class="sub">nights a bed was used, ${rc.label}</div></div>
+    <div class="box"><div class="lbl">Time on beds</div><div class="val">${rc.tot.ms ? dur(rc.tot.ms) : '0m'}</div>
+      <div class="sub">${rc.tot.sessions} bed session(s) ${rc.label}</div></div>`;
+  $('#reconNote').textContent = `A night runs ${String(CHECKOUT_HOUR).padStart(2,'0')}:00 → ${String(CHECKOUT_HOUR).padStart(2,'0')}:00 · each night a bed is used counts once at the room rate`;
 
-  const rrows = rc.list.filter(r=>r.ms || r.handed || r.expected).sort((a,b)=>(b.expected-b.handed)-(a.expected-a.handed) || byRoomNo(a.room.room_no,b.room.room_no));
-  $('#reconRows').innerHTML = rrows.length ? rrows.map(r=>{ const df = r.expected - r.handed;
-    return `<tr class="click" data-room="${r.room.id}"><td><b>${roomLabel(r.room.id)}</b></td><td class="num">${r.ms?dur(r.ms):'—'}</td><td class="num">${r.nights}</td>
-      <td class="num">${num(r.expected)}</td><td class="num">${num(r.handed)}</td><td class="num ${df>0?'neg':''}">${df>0?'−':''}${num(Math.abs(df))}</td></tr>`; }).join('')
-    + `<tr><td><b>Total</b></td><td></td><td class="num"><b>${rc.tot.nights}</b></td><td class="num"><b>${num(rc.tot.expected)}</b></td><td class="num"><b>${num(rc.tot.handed)}</b></td><td class="num ${diff>0?'neg':''}"><b>${diff>0?'−':''}${num(Math.abs(diff))}</b></td></tr>`
-    : `<tr><td colspan="6" class="empty">No bed use or payments ${rc.label}.</td></tr>`;
+  const rrows = rc.list.filter(r=>r.ms || r.sales).sort((a,b)=>b.sales-a.sales || byRoomNo(a.room.room_no,b.room.room_no));
+  $('#reconRows').innerHTML = rrows.length ? rrows.map(r=>`<tr class="click" data-room="${r.room.id}"><td><b>${roomLabel(r.room.id)}</b></td>
+      <td class="num">${r.ms?dur(r.ms):'—'}</td><td class="num">${r.nights}</td><td class="num">${num(r.sales)}</td></tr>`).join('')
+    + `<tr><td><b>Total</b></td><td class="num"><b>${rc.tot.ms?dur(rc.tot.ms):'—'}</b></td><td class="num"><b>${rc.tot.nights}</b></td><td class="num"><b>${num(rc.tot.sales)}</b></td></tr>`
+    : `<tr><td colspan="4" class="empty">No bed use ${rc.label}.</td></tr>`;
 
   const log = rc.sessions.slice().sort((a,b)=>String(b.start).localeCompare(a.start)).slice(0,300);
   $('#logNote').textContent = rc.sessions.length + ' session(s) ' + rc.label;
@@ -712,12 +686,31 @@ function renderView(){
       <td class="num">${dur(s.ms)}</td><td class="num">${amt?num(amt):'<span class="meta">same night</span>'}</td></tr>`; }).join('')
     : `<tr><td colspan="6" class="empty">No bed sessions ${rc.label}.</td></tr>`;
 
-  // ----- sidebar badge -----
-  $('#navBadge').textContent = openAlerts.length;
-  $('#navBadge').classList.toggle('hidden', !openAlerts.length);
+  // ----- this month summary -----
+  const month = reconcile(data, 'month');
+  $('#reportKv').innerHTML = `
+    <dt>Room sales this month</dt><dd><b>${money(month.tot.sales)}</b></dd>
+    <dt>Room sales today</dt><dd>${money(todaySales.tot.sales)}</dd>
+    <dt>Room-nights this month</dt><dd>${month.tot.nights}</dd>
+    <dt>Time on beds this month</dt><dd>${month.tot.ms ? dur(month.tot.ms) : '—'}</dd>
+    <dt>Rooms occupied now</dt><dd>${occ.size} of ${roomsTotal}</dd>
+    <dt>Sensors offline</dt><dd class="${offline.length?'neg':''}">${offline.length}</dd>`;
+  $('#events').innerHTML = data.events.length ? data.events.slice(0,30).map(e=>`<li><div class="row">
+      <span>Room ${roomIdByDevice(e.device_id) ? roomLabel(roomIdByDevice(e.device_id)) : esc(e.device_id)}</span>
+      <span class="tag ${e.occupied?'bad':'ok'}">${e.occupied?'Bed occupied':'Bed empty'}</span></div>
+      <div class="meta">${fmtTime(e.created_at)}</div></li>`).join('')
+    : '<li class="empty">No bed activity yet.</li>';
+
+  // ----- alerts: sensors that are offline or missing -----
+  $('#navBadge').textContent = offline.length;
+  $('#navBadge').classList.toggle('hidden', !offline.length);
+  $('#alertsOpen').innerHTML = offline.length ? offline.map(s=>`<li class="click" data-room="${s.room_id}" style="cursor:pointer">
+      <div class="row"><b>Room ${roomLabel(s.room_id)}</b><span class="tag bad">${s.status==='no_sensor'?'No sensor':'Offline'}</span></div>
+      <div>${s.status==='no_sensor' ? 'No bed sensor is linked to this room.' : 'Sensor ' + esc(s.device_id) + ' has not reported for ' + ago(s.last_seen) + ' (check power and WiFi).'}</div></li>`).join('')
+    : '<li class="empty">All sensors are reporting.</li>';
 
   // ----- legend -----
-  const counts = {}; st.forEach(s=>counts[s.status]=(counts[s.status]||0)+1);
+  const counts = {}; st.forEach(s=>{ const k = dispStatus(s); counts[k]=(counts[k]||0)+1; });
   $('#roomsTitle').textContent = 'Rooms ' + roomsTotal;
   $('#legend').innerHTML = Object.entries(STATUS).filter(([k])=>counts[k]).map(([k,v])=>
     `<span data-filter="${filter===k?'':k}" class="${filter===k?'active':''}"><i style="background:${v.bg};border-color:${v.line}"></i>${v.label} ${counts[k]}</span>`).join('');
@@ -732,82 +725,26 @@ function renderView(){
     const tiles = g.rooms.flatMap(r=>{
       const beds = st.filter(s=>s.room_id===r.id);
       const list = beds.length ? beds : [{room_id:r.id, room_no:r.room_no, status:'no_sensor'}];
-      return list.filter(s=>!filter || s.status===filter).map(s=>{
-        const meta = STATUS[s.status] || {label:s.status};
-        let x = num(r.rate), cls = s.status, label = meta.label;
-        if (s.guest_name) x = esc(s.guest_name);
-        else if (s.status==='unregistered') x = 'On bed ' + ago(s.occupied_since);
-        else if (s.status==='sensor_offline') x = 'Seen ' + ago(s.last_seen) + ' ago';
-        // live report from the device: weight came on / went off, still confirming
-        if (s.status!=='sensor_offline' && s.pending_kind==='pending_on' && !s.is_occupied){
-          cls = 'detecting'; label = 'Weight detected'; x = 'confirming · ' + ago(s.pending_since);
-        } else if (s.status!=='sensor_offline' && s.pending_kind==='pending_off' && s.is_occupied){
-          x = 'Left bed ' + ago(s.pending_since) + ' ago?';
-        }
+      return list.filter(s=>!filter || dispStatus(s)===filter).map(s=>{
+        const cls = dispStatus(s), meta = STATUS[cls] || {label:cls}, label = meta.label;
+        let x = num(r.rate);
+        if (cls==='occupied') x = 'On bed ' + ago(s.occupied_since);
+        else if (cls==='sensor_offline') x = 'Seen ' + ago(s.last_seen) + ' ago';
+        else if (cls==='detecting') x = 'confirming · ' + ago(s.pending_since);
+        if (cls==='occupied' && s.pending_kind==='pending_off') x = 'Left bed ' + ago(s.pending_since) + ' ago?';
         return `<div class="tile t-${cls}" data-room="${r.id}" title="${label}">
           <div class="no">${esc(r.room_no)}${beds.length>1?'<small style="font-size:13px"> '+esc(s.bed)+'</small>':''}</div>
           <div class="st">${label}</div><div class="x">${x}</div></div>`;
       });
     });
     if (!tiles.length) return '';
-    const free = g.rooms.filter(r=>!data.bookings.some(b=>b.room_id===r.id)).length;
+    const free = g.rooms.filter(r=>{ const b = st.filter(x=>x.room_id===r.id); return b.length && b.every(x=>dispStatus(x)==='available'); }).length;
     return `<div class="group"><div class="group-h">
         <b>${branchSel==='all' && (data.branches||[]).length>1 && g.branch ? esc(shortBranch(branchName(g.branch)))+' · ' : ''}${esc(g.type)} · ${g.rooms.length} room${g.rooms.length>1?'s':''} · ${money(g.rate)} per night</b>
         <span>${free} available</span></div>
       <div class="tiles">${tiles.join('')}</div></div>`;
   }).join('');
-  $('#roomGroups').innerHTML = html || '<div class="empty">No rooms yet. Add one with “+ Room”.</div>';
-
-  // ----- guests -----
-  $('#guestRows').innerHTML = data.bookings.length ? data.bookings
-    .map(b=>({b, r:roomById(b.room_id), ...balanceOf(b)}))
-    .sort((x,y)=>byRoomNo(x.r?.room_no,y.r?.room_no))
-    .map(({b,r,paid,bal})=>`<tr class="click" data-room="${b.room_id}">
-      <td><b>${roomLabel(b.room_id)}</b></td><td>${esc(b.guest_name)}</td><td>${esc(b.guest_phone||'—')}</td><td>${fmtTime(b.check_in)}</td>
-      <td class="num">${num(b.amount_due)}</td><td class="num">${num(paid)}</td>
-      <td class="num ${bal>0?'neg':''}">${num(bal)}</td></tr>`).join('')
-    : '<tr><td colspan="7" class="empty">No guests checked in.</td></tr>';
-
-  // ----- payments -----
-  const monthPays = data.payments.filter(p=>new Date(p.paid_at)>=month0);
-  const month = monthPays.reduce((s,p)=>s+Number(p.amount),0);
-  $('#payTotal').textContent = monthPays.length + ' payments · ' + money(month);
-  $('#payRows').innerHTML = monthPays.length ? monthPays.map(p=>`<tr>
-      <td>${fmtTime(p.paid_at)}</td><td>${roomLabel(p.bookings?.room_id)}</td>
-      <td>${esc(p.bookings?.guest_name||'')}</td><td>${esc(p.method)}</td><td class="num">${num(p.amount)}</td></tr>`).join('')
-    : '<tr><td colspan="5" class="empty">No payments this month.</td></tr>';
-
-  // ----- reports -----
-  const outstanding = data.bookings.reduce((s,b)=>s+Math.max(0,balanceOf(b).bal),0);
-  const beds = st.filter(s=>s.device_id).length;
-  $('#reportKv').innerHTML = `
-    <dt>Collected this month</dt><dd><b>${money(month)}</b></dd>
-    <dt>Collected today</dt><dd>${money(today)}</dd>
-    <dt>Unpaid by guests in house</dt><dd>${money(outstanding)}</dd>
-    <dt>Unregistered bed use this month</dt><dd class="${leak.length?'neg':''}">${leak.length} time(s) · ${money(leakAmt)}</dd>
-    <dt>Rooms checked in now</dt><dd>${checkedIn} of ${roomsTotal}</dd>
-    <dt>Beds in use now (sensors)</dt><dd>${st.filter(s=>s.is_occupied).length} of ${beds}</dd>
-    <dt>Sensors offline</dt><dd>${st.filter(s=>s.status==='sensor_offline').length}</dd>`;
-  const byMethod = {};
-  monthPays.forEach(p=>{ const m=byMethod[p.method] ||= {n:0,a:0}; m.n++; m.a+=Number(p.amount); });
-  $('#methodRows').innerHTML = Object.keys(byMethod).length ? Object.entries(byMethod).sort((a,b)=>b[1].a-a[1].a)
-    .map(([m,v])=>`<tr><td>${esc(m)}</td><td class="num">${v.n}</td><td class="num">${num(v.a)}</td></tr>`).join('')
-    : '<tr><td colspan="3" class="empty">No payments this month.</td></tr>';
-  $('#events').innerHTML = data.events.length ? data.events.slice(0,30).map(e=>`<li><div class="row">
-      <span>Room ${roomIdByDevice(e.device_id) ? roomLabel(roomIdByDevice(e.device_id)) : esc(e.device_id)}</span>
-      <span class="tag ${e.occupied?'bad':'ok'}">${e.occupied?'Bed occupied':'Bed empty'}</span></div>
-      <div class="meta">${fmtTime(e.created_at)}</div></li>`).join('')
-    : '<li class="empty">No bed activity yet.</li>';
-
-  // ----- alerts -----
-  $('#alertsOpen').innerHTML = openAlerts.length ? openAlerts.map(a=>`<li>
-      <div class="row"><b>Room ${roomLabel(a.room_id)}</b>${READ_ONLY ? '<span class="tag bad">Open</span>' : `<button class="btn sm" data-resolve="${a.id}">Resolve</button>`}</div>
-      <div>${esc(a.message||a.kind)}</div><div class="meta">${fmtTime(a.created_at)} · ${ago(a.created_at)} ago</div></li>`).join('')
-    : '<li class="empty">No open alerts.</li>';
-  const done = data.alerts.filter(a=>a.resolved);
-  $('#alertsDone').innerHTML = done.length ? done.map(a=>`<li><div class="row"><b>Room ${roomLabel(a.room_id)}</b><span class="tag">Resolved</span></div>
-      <div>${esc(a.message||a.kind)}</div><div class="meta">${fmtTime(a.created_at)}</div></li>`).join('')
-    : '<li class="empty">Nothing resolved this month.</li>';
+  $('#roomGroups').innerHTML = html || '<div class="empty">No rooms yet.</div>';
 }
 
 /* =================== NAVIGATION =================== */
@@ -843,49 +780,26 @@ const methodOptions = () => PAY_METHODS.map(m=>`<option>${m}</option>`).join('')
 function roomModal(roomId){
   const s = data.status.find(x=>x.room_id===roomId);
   const r = roomById(roomId);
-  const b = data.bookings.find(x=>x.room_id===roomId);
-  const meta = STATUS[s?.status || 'no_sensor'];
-  let html = `<dl class="kv">
+  const meta = STATUS[s?.status || 'no_sensor'] || STATUS.no_sensor;
+  const m = reconcile(data, 'month');
+  const row = m.list.find(x=>x.room.id===roomId);
+  const ss = m.sessions.filter(x=>x.room_id===roomId).sort((a,b)=>String(b.start).localeCompare(a.start));
+  const html = `<dl class="kv">
     <dt>Status</dt><dd><b style="color:${meta.color}">${meta.label}</b></dd>
     <dt>Branch</dt><dd>${esc(branchName(r?.branch_id)||'—')}</dd>
     <dt>Type / rate</dt><dd>${esc(r?.room_type||'—')} · ${money(r?.rate)}/night</dd>
     <dt>Sensor</dt><dd>${esc(s?.device_id||'none')}</dd>
     <dt>Last report</dt><dd>${s?.last_seen? ago(s.last_seen)+' ago':'—'}</dd>
-    <dt>Bed</dt><dd>${s?.is_occupied? 'in use for '+ago(s.occupied_since):'empty'}</dd>
-    ${s?.pending_kind ? `<dt>Live</dt><dd><b style="color:#b7791f">${s.pending_kind==='pending_on'?'weight detected':'weight gone'} ${ago(s.pending_since)} ago · confirming</b></dd>` : ''}`;
-  let foot;
-  if (b){
-    const {paid,bal} = balanceOf(b);
-    html += `<dt>Guest</dt><dd>${esc(b.guest_name)}</dd>
-      <dt>Phone</dt><dd>${esc(b.guest_phone||'—')}</dd>
-      <dt>Checked in</dt><dd>${fmtTime(b.check_in)}</dd>
-      <dt>Nights</dt><dd>${b.nights} × ${money(b.rate)}</dd>
-      <dt>Total due</dt><dd>${money(b.amount_due)}</dd>
-      <dt>Paid</dt><dd>${money(paid)}</dd>
-      <dt>Balance</dt><dd><b class="${bal>0?'neg':''}">${money(bal)}</b></dd>`;
-    foot = `<button class="btn" data-close>Close</button><button class="btn" id="mPay">Add payment</button><button class="btn danger" id="mOut">Check out</button>`;
-  } else {
-    foot = `<button class="btn" data-close>Close</button><button class="btn primary" id="mIn">Check in guest</button>`;
-  }
-  if (READ_ONLY) foot = `<button class="btn" data-close>Close</button>`;
-  // occupancy history for this room (this month)
-  const prev = period; period = 'month';
-  const rc = reconcile(data); period = prev;
-  const row = rc.list.find(x=>x.room.id===roomId);
-  const ss = rc.sessions.filter(x=>x.room_id===roomId).sort((a,b)=>String(b.start).localeCompare(a.start));
-  html += `</dl><h4 style="margin:18px 0 6px;font-family:var(--serif);font-size:15px">Bed occupancy this month</h4>
+    <dt>Bed</dt><dd>${s?.is_occupied? 'occupied for '+ago(s.occupied_since):'empty'}</dd>
+    ${s?.pending_kind ? `<dt>Live</dt><dd><b style="color:#b7791f">${s.pending_kind==='pending_on'?'weight detected':'weight gone'} ${ago(s.pending_since)} ago · confirming</b></dd>` : ''}
+    </dl><h4 style="margin:18px 0 6px;font-family:var(--serif);font-size:15px">This month</h4>
     <dl class="kv"><dt>Time on bed</dt><dd>${row?.ms?dur(row.ms):'—'}</dd>
-    <dt>Nights detected</dt><dd>${row?.nights||0}</dd>
-    <dt>Expected</dt><dd>${money(row?.expected)}</dd>
-    <dt>Handed over</dt><dd>${money(row?.handed)}</dd>
-    <dt>Difference</dt><dd><b class="${(row?.expected||0)>(row?.handed||0)?'neg':''}">${(row?.expected||0)>(row?.handed||0)?'−':''}${money(Math.abs((row?.expected||0)-(row?.handed||0)))}</b></dd></dl>`
-    + (ss.length ? `<div class="tablewrap" style="margin-top:8px;max-height:220px;overflow:auto"><table class="sess"><thead><tr><th>On</th><th>Off</th><th class="num">Time</th></tr></thead><tbody>`
+    <dt>Room-nights</dt><dd>${row?.nights||0}</dd>
+    <dt>Room sales</dt><dd><b>${money(row?.sales)}</b></dd></dl>`
+    + (ss.length ? `<div class="tablewrap" style="margin-top:8px;max-height:220px;overflow:auto"><table class="sess"><thead><tr><th>Weight on</th><th>Weight off</th><th class="num">Time</th></tr></thead><tbody>`
       + ss.slice(0,40).map(x=>`<tr><td>${fmtTime(x.start)}</td><td>${x.end?fmtTime(x.end):'still on bed'}</td><td class="num">${dur(x.ms)}</td></tr>`).join('')
       + '</tbody></table></div>' : '<p class="meta">No bed sessions recorded this month.</p>');
-  openModal('Room ' + (r?.room_no||''), html, foot);
-  $('#mIn')?.addEventListener('click', ()=>checkInModal(roomId));
-  $('#mPay')?.addEventListener('click', ()=>paymentModal(b));
-  $('#mOut')?.addEventListener('click', ()=>checkOutModal(b));
+  openModal('Room ' + (r?.room_no||''), html, `<button class="btn" data-close>Close</button>`);
 }
 
 function checkInModal(preRoom){
@@ -985,7 +899,9 @@ if (!READ_ONLY){
 let refreshTimer = null;
 async function refresh(){
   try {
-    data = await api.load(); render();
+    data = await api.load();
+    data.status = data.status.map(x=>({...x, status: x.status==='unregistered' ? 'occupied' : x.status==='booked_guest_out' ? 'available' : x.status}));
+    render();
     const errs = data.errors || [];
     $('#loadErr').classList.toggle('hidden', !errs.length);
     $('#loadErr').innerHTML = errs.length ? '<b>Some data could not be loaded:</b><br>' + errs.map(esc).join('<br>')
