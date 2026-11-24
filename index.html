@@ -233,7 +233,6 @@ input:focus,select:focus{outline:2px solid var(--purple2);outline-offset:-1px}
         <div class="card">
           <div class="card-h"><h2>Room sales from bed sensors</h2><div class="seg" data-seg></div></div>
           <div class="recon" id="recon"></div>
-          <div class="recon-foot"><span id="reconNote"></span><button class="linkbtn" data-goto="reports">Per room details →</button></div>
         </div>
         <div class="card">
           <div class="card-h"><h2 id="roomsTitle">Rooms</h2><div class="legend" id="legend"></div></div>
@@ -653,9 +652,9 @@ function renderView(){
 
   // ----- KPI cards (sensor data only) -----
   $('#kpis').innerHTML = `
-    <div class="kpi green"><div class="lbl">Rooms available</div><div class="val">${available}</div><div class="sub">of ${roomsTotal} · sensor working, no weight on the bed</div></div>
-    <div class="kpi red"><div class="lbl">Rooms occupied</div><div class="val">${occ.size}</div><div class="sub">of ${roomsTotal}${det.size ? ' · +' + det.size + ' weight detected, confirming' : ' · weight detected by sensors'}</div></div>
-    <div class="kpi hi"><div class="lbl">Room sales today</div><div class="val">${money(todaySales.tot.sales)}</div><div class="sub">${todaySales.tot.nights} room-night(s) from bed sensors</div></div>`;
+    <div class="kpi green"><div class="lbl">Rooms available</div><div class="val">${available}</div></div>
+    <div class="kpi red"><div class="lbl">Rooms occupied</div><div class="val">${occ.size}</div></div>
+    <div class="kpi hi"><div class="lbl">Room sales today</div><div class="val">${money(todaySales.tot.sales)}</div></div>`;
 
   // ----- room sales card -----
   document.querySelectorAll('[data-seg]').forEach(el=>{
@@ -664,13 +663,9 @@ function renderView(){
   });
   const rc = reconcile(data);
   $('#recon').innerHTML = `
-    <div class="box ok"><div class="lbl">Room sales</div><div class="val">${money(rc.tot.sales)}</div>
-      <div class="sub">room-nights × room rate, ${rc.label}</div></div>
-    <div class="box"><div class="lbl">Room-nights occupied</div><div class="val">${rc.tot.nights}</div>
-      <div class="sub">nights a bed was used, ${rc.label}</div></div>
-    <div class="box"><div class="lbl">Time on beds</div><div class="val">${rc.tot.ms ? dur(rc.tot.ms) : '0m'}</div>
-      <div class="sub">${rc.tot.sessions} bed session(s) ${rc.label}</div></div>`;
-  $('#reconNote').textContent = `A night runs ${String(CHECKOUT_HOUR).padStart(2,'0')}:00 → ${String(CHECKOUT_HOUR).padStart(2,'0')}:00 · each night a bed is used counts once at the room rate`;
+    <div class="box ok"><div class="lbl">Room sales</div><div class="val">${money(rc.tot.sales)}</div></div>
+    <div class="box"><div class="lbl">Room-nights occupied</div><div class="val">${rc.tot.nights}</div></div>
+    <div class="box"><div class="lbl">Time on beds</div><div class="val">${rc.tot.ms ? dur(rc.tot.ms) : '0m'}</div></div>`;
 
   const rrows = rc.list.filter(r=>r.ms || r.sales).sort((a,b)=>b.sales-a.sales || byRoomNo(a.room.room_no,b.room.room_no));
   $('#reconRows').innerHTML = rrows.length ? rrows.map(r=>`<tr class="click" data-room="${r.room.id}"><td><b>${roomLabel(r.room.id)}</b></td>
